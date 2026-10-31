@@ -216,6 +216,7 @@ def cmd_viz(args) -> None:
         start_s=args.start, end_s=args.end, firefly_stride=args.firefly_stride,
         events_fps=args.events_fps, events_scale=args.events_scale, lidar_stride=args.lidar_stride,
         objects=list(ds.objects.values()), labels=not args.no_labels,
+        mask_stride=args.mask_stride or (10 if args.web else 1),
     )
 
 
@@ -485,6 +486,8 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("--events-fps", type=float, default=20.0)
     v.add_argument("--events-scale", type=float, default=0.5)
     v.add_argument("--lidar-stride", type=int, default=1)
+    v.add_argument("--mask-stride", type=int,
+                   help="draw the ground-truth masks on every n-th camera frame (default 1; 10 with --web)")
     v.add_argument("--no-labels", action="store_true",
                    help="don't draw ground-truth masks / boxes on calibrated cameras (faster)")
     out = v.add_mutually_exclusive_group()

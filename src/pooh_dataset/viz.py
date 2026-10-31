@@ -68,7 +68,8 @@ def render_events(ev, height: int, width: int, scale: float = 1.0) -> np.ndarray
     return img
 
 
-def blueprint(traj: Trajectory | None = None, modalities: list[str] | None = None) -> rrb.Blueprint:
+def blueprint(traj: Trajectory | None = None, modalities: list[str] | None = None,
+              collapse_panels: bool = True) -> rrb.Blueprint:
     def has(m: str) -> bool:
         return (traj is None or traj.has(m)) and (modalities is None or m in modalities)
 
@@ -96,7 +97,7 @@ def blueprint(traj: Trajectory | None = None, modalities: list[str] | None = Non
         row_shares=[3, 2],
     )
     layout = rrb.Horizontal(left, rrb.Vertical(*right), column_shares=[2, 3]) if right else left
-    return rrb.Blueprint(layout, collapse_panels=True)
+    return rrb.Blueprint(layout, collapse_panels=collapse_panels)
 
 
 def _t0(traj: Trajectory) -> int:
@@ -120,6 +121,7 @@ def log_trajectory(
     objects: list | None = None,
     labels: bool = True,
     max_mask_pixels: int = 1_000_000,
+    mask_stride: int = 1,
 ) -> None:
     """Log one trajectory into ``rec``. Only locally available modalities are logged.
 
@@ -127,7 +129,8 @@ def log_trajectory(
     their mocap pose, through their ``T_body_model``: a quick visual check of that transform.
     With ``labels``, every camera that has extrinsics also gets the ground truth drawn on its
     images (box, cube wireframe, and the mask for cameras up to ``max_mask_pixels``), and its
-    frustum in the 3D view.
+    frustum in the 3D view. Masks are uncompressed (0.9 MB per 1280x720 frame): ``mask_stride``
+    draws them on every n-th frame only (the boxes on every frame).
     """
     mods = [m for m in (modalities or traj.modalities) if traj.has(m)]
     t0 = _t0(traj)
@@ -262,12 +265,12 @@ def log_trajectory(
                 _log_frustum(rec, traj, cam)
             ts = traj.timestamps(cam)
             idx = np.nonzero(window(ts))[0][::stride]
-            for i in step.iter(idx, cam + (" + labels" if labeler else "")):
+            for n, i in enumerate(step.iter(idx, cam + (" + labels" if labeler else ""))):
                 rec.set_time(TIMELINE, duration=secs(ts[i]))
                 data = traj.frame_bytes(cam, i)
                 rec.log(f"cams/{cam}", rr.EncodedImage(contents=data, media_type=_media_type(data)))
                 if labeler is not None:
-                    labeler(rec, f"cams/{cam}", int(ts[i]))
+                    labeler(rec, f"cams/{cam}", int(ts[i]), mask=n % max(1, mask_stride) == 0)
 
     for dm in DEPTH_MODALITIES:
         if dm not in mods:
@@ -338,7 +341,7 @@ def _labeler(traj: Trajectory, cam: str, objs: list, max_mask_pixels: int):
         return None
     with_masks = intr.width * intr.height <= max_mask_pixels
 
-    def log(rec, path: str, t_ns: int) -> None:
+    def log(rec, path: str, t_ns: int, mask: bool = True) -> None:
         items = []
         for o in objs:
             T, ok = object_pose_in_camera(traj, cam, o, t_ns)
@@ -363,7 +366,9 @@ def _labeler(traj: Trajectory, cam: str, objs: list, max_mask_pixels: int):
         rec.log(f"{path}/labels/boxes", rr.Boxes2D(array=np.array(boxes), array_format=rr.Box2DFormat.XYXY,
                                                    class_ids=cls, labels=names))
         rec.log(f"{path}/labels/wireframe", rr.LineStrips2D(strips, colors=[(255, 255, 255)], radii=[0.5]))
-        if with_masks:
+        if with_masks and not mask:  # no mask on this frame: don't leave the last one on screen
+            rec.log(f"{path}/labels/mask", rr.Clear(recursive=False))
+        elif with_masks:
             seg = np.zeros(inst.shape, np.uint8)
             for k, (o, _) in enumerate(items):
                 seg[inst == k + 1] = o.class_id
@@ -428,7 +433,8 @@ def visualize(
     """Log trajectories and show them.
 
     ``mode``: ``"spawn"`` (native viewer window), ``"web"`` (viewer in the browser, served
-    from this process; blocks until Ctrl-C) or ``"save"`` (one ``<trajectory>.rrd`` per
+    from this process; blocks until Ctrl-C; the browser holds at most ~4 GB and drops the
+    oldest data beyond that, so log few trajectories / modalities there) or ``"save"`` (one ``<trajectory>.rrd`` per
     trajectory in ``save_dir``; open later with ``rerun *.rrd``).
     """
     from pathlib import Path
@@ -436,7 +442,8 @@ def visualize(
     recs, url = [], None
     for traj in trajs:
         rec = rr.RecordingStream(APP_ID, recording_id=traj.name)
-        bp = blueprint(traj, log_kw.get("modalities"))
+        # the browser has no window chrome to find them otherwise: show the recordings panel
+        bp = blueprint(traj, log_kw.get("modalities"), collapse_panels=mode != "web")
         if mode == "spawn":
             rec.spawn(default_blueprint=bp, memory_limit="75%")
         elif mode == "save":

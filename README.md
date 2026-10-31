@@ -90,9 +90,15 @@ pooh viz -t trajectory_007 --download        # fetches everything but Firefly, t
 pooh viz -t trajectory_007 -t trajectory_009 # several trajectories: switch in the recordings panel
 pooh viz -m mocap -m robot_messages          # all local trajectories, trajectory + actions only
 pooh viz -t trajectory_008 --start 10 --end 20 -m events -m realsense_color
-pooh viz --web                               # viewer in the browser (e.g. over SSH port-forward)
+pooh viz -t trajectory_050 --web             # viewer in the browser (e.g. over SSH port-forward)
 pooh viz --save out/                         # write out/<trajectory>.rrd; open with `rerun out/*.rrd`
 ```
+
+The browser viewer holds at most ~4 GB and drops the **oldest** data beyond that: the start of
+the timeline goes empty (bodies stop moving until near the end). One real trajectory with every
+modality is ~0.4 GB with `--web` (masks on every 10th frame, `--mask-stride`); open one or two
+at a time, switch between them in the recordings panel (left), or use `--save` + the native
+viewer for many.
 
 Layout: 3D mocap world (bodies, full paths, goal and its heading) · x / y / yaw of every
 body with the goal as a reference line · distance to goal · Firefly, RealSense colour +
