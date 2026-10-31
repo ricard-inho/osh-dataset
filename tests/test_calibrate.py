@@ -1,9 +1,9 @@
 import numpy as np
 
-from oshd_dataset.calibrate import Observation, predict, solve
-from oshd_dataset.calibration import CameraIntrinsics
-from oshd_dataset.geometry import invert_pose, rotvec_to_rotmat, transform_points
-from oshd_dataset.objects import ObjectModel
+from oshd.calibrate import Observation, predict, solve
+from oshd.calibration import CameraIntrinsics
+from oshd.geometry import invert_pose, rotvec_to_rotmat, transform_points
+from oshd.objects import ObjectModel
 
 CUBE_CORNERS = np.array([[x, y, z] for x in (-0.05, 0.05) for y in (0.0, 0.1) for z in (-0.05, 0.05)])
 
@@ -77,13 +77,13 @@ def test_calibrate_cli_from_clicks_file(fake_root, tmp_path):
 
     import yaml
 
-    from oshd_dataset import OshdDataset
-    from oshd_dataset.cli import main
-    from oshd_dataset.labels import object_pose_in_camera
+    from oshd import OshDataset
+    from oshd.cli import main
+    from oshd.labels import object_pose_in_camera
 
     root = tmp_path / "ds"
     shutil.copytree(fake_root, root)
-    ds = OshdDataset(root)
+    ds = OshDataset(root)
     traj, cube = ds["trajectory_a"], ds.objects["cubesat"]
     intr = traj.calibration.intrinsics("firefly")
     frames = []
@@ -109,7 +109,7 @@ def test_calibrate_cli_from_clicks_file(fake_root, tmp_path):
     assert len(list((out / "overlays_firefly").glob("*.png"))) == len(frames)
     # applied to the local dataset: labels now work there
     assert (root / "calibration" / "rig.yaml").exists()
-    ds2 = OshdDataset(root)
+    ds2 = OshDataset(root)
     assert "firefly" in ds2["trajectory_a"].calibration.extrinsics
 
     # an object whose T_body_model was measured from Motive markers is kept fixed by default
@@ -127,7 +127,7 @@ def test_web_click_session_over_http():
     import threading
     import urllib.request
 
-    from oshd_dataset.calibrate_web import WebClickSession
+    from oshd.calibrate_web import WebClickSession
 
     frames = iter([((f"t{i}", i, i), f"frame {i}", np.full((20, 30, 3), i * 40, np.uint8)) for i in range(4)])
     got = []
@@ -166,7 +166,7 @@ def test_web_click_session_over_http():
 
 
 def test_select_frames_skips_clicked(ds):
-    from oshd_dataset.calibrate import select_frames
+    from oshd.calibrate import select_frames
 
     cube = ds.objects["cubesat"]
     first = select_frames(ds, "firefly", cube, "SensorStack", 2, step=1)
@@ -177,7 +177,7 @@ def test_select_frames_skips_clicked(ds):
 
 
 def test_align_markers_recovers_transform():
-    from oshd_dataset.calibrate import MOTIVE_TO_ROS_BODY, align_markers
+    from oshd.calibrate import MOTIVE_TO_ROS_BODY, align_markers
 
     rng = np.random.default_rng(3)
     cad = np.array([[0.046, 0.118, -0.046], [-0.047, 0.1215, -0.047], [-0.047, 0.1215, 0.047], [0.047, 0.1215, 0.047]])

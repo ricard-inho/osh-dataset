@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 from conftest import FRAME_DT, N_FRAMES, SIM_F, SIM_H, SIM_TARGET_X, SIM_TRAJ, SIM_W, SPEED
 
-from oshd_dataset import hub
-from oshd_dataset.labels import camera_pose
-from oshd_dataset.tasks import OpticalFlow
+from oshd import hub
+from oshd.labels import camera_pose
+from oshd.tasks import OpticalFlow
 
 
 def test_listing_and_domains(ds):
@@ -73,7 +73,7 @@ def test_optical_flow_sim(ds):
 
 
 def test_quality_sim(ds):
-    from oshd_dataset.quality import trajectory_report
+    from oshd.quality import trajectory_report
 
     rep = trajectory_report(ds[SIM_TRAJ])
     assert rep.final_pos_error_m == pytest.approx(0.02) and rep.ok, rep.warnings

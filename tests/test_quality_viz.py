@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from conftest import H, W
 
-from oshd_dataset.cli import main
-from oshd_dataset.quality import StreamStats, format_reports, trajectory_report
+from oshd.cli import main
+from oshd.quality import StreamStats, format_reports, trajectory_report
 
 
 def test_stream_stats_gaps():
@@ -36,7 +36,7 @@ def test_viz_download_into_missing_root(tmp_path, monkeypatch, fake_root):
     pytest.importorskip("rerun")
     import shutil
 
-    import oshd_dataset.hub as hub
+    import oshd.hub as hub
 
     calls = []
 
@@ -55,7 +55,7 @@ def test_viz_download_into_missing_root(tmp_path, monkeypatch, fake_root):
 
 def test_viz_save(ds, tmp_path):
     pytest.importorskip("rerun")
-    from oshd_dataset.viz import render_events, visualize
+    from oshd.viz import render_events, visualize
 
     ev = ds["trajectory_a"].events(*ds["trajectory_a"].time_range("events"))
     img = render_events(ev, H, W, 0.5)
@@ -70,7 +70,7 @@ def test_viz_save_sim(ds, tmp_path):
     pytest.importorskip("rerun")
     from conftest import SIM_TRAJ
 
-    from oshd_dataset.viz import visualize
+    from oshd.viz import visualize
 
     visualize([ds[SIM_TRAJ]], mode="save", save_dir=str(tmp_path), progress=False, events_fps=10)
     assert (tmp_path / f"{SIM_TRAJ}.rrd").stat().st_size > 1_000

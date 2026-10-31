@@ -18,7 +18,7 @@ from ._common import image_ext, progress, raw_if_unchanged, write_image
 
 
 def export_bop(task: ObjectDetection, out_dir: str | Path, split_name: str = "train") -> Path:
-    """Export an :class:`~oshd_dataset.tasks.ObjectDetection` task (constructed with
+    """Export an :class:`~oshd.tasks.ObjectDetection` task (constructed with
     ``undistort=True``) to ``<out_dir>/<split_name>/<scene_id>/...`` plus ``models/``."""
     if any(task.view(task.dataset[t]).intrinsics.has_distortion for t in task.trajectories):
         raise ValueError("BOP assumes pinhole images: build the task with undistort=True")

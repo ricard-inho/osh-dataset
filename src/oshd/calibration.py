@@ -29,7 +29,7 @@ from .geometry import make_pose, max_monotonic_radius, project_points
 __all__ = ["CameraIntrinsics", "Calibration", "MissingCalibrationError", "parse_transform"]
 
 REQUIREMENTS_HINT = (
-    "See https://github.com/ricard-inho/oshd-dataset/blob/main/DATA_REQUIREMENTS.md for the calibration "
+    "See https://github.com/ricard-inho/osh-dataset/blob/main/DATA_REQUIREMENTS.md for the calibration "
     "files the dataset needs to provide, and run `oshd check` to see what is missing."
 )
 RESERVED_KEYS = {"extrinsics", "time_offsets_ns"}

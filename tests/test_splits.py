@@ -5,7 +5,7 @@ import json
 import pytest
 from conftest import SIM_TRAJ
 
-from oshd_dataset.splits import hash_split, load_benchmark, load_splits, sim_run, update_sim_splits
+from oshd.splits import hash_split, load_benchmark, load_splits, sim_run, update_sim_splits
 
 CONFIGS = {"sim_3d": ["orbital_iss_earth_orbit", "orbital_cubesat_black_approach"],
            "sim_zerog": ["zerog_cubesat_arm_wall_docking", "zerog_satellite_mockup_floating_inspection"]}
@@ -116,7 +116,7 @@ def test_benchmark_v2_frozen_and_extends_v1():
 
 
 def test_benchmark_split_and_download_pin(ds, monkeypatch):
-    from oshd_dataset import hub
+    from oshd import hub
 
     assert ds.split("test", benchmark="v1") == []  # none of the fixture's trajectories is in it
     with pytest.raises(ValueError, match="pinned"):
@@ -137,10 +137,10 @@ def test_benchmark_fixes_sim_assignments():
 
 
 def test_dataset_default_benchmark(ds):
-    from oshd_dataset import OshdDataset
+    from oshd import OshDataset
 
-    b = OshdDataset(ds.root, benchmark="v1")
+    b = OshDataset(ds.root, benchmark="v1")
     assert b.split("train") == [] and b.split("all") == []  # none of the fixture's trajectories is in v1
     assert ds.split("train") == ["trajectory_a"]  # no default benchmark
     with pytest.raises(ValueError):
-        OshdDataset(ds.root, benchmark="v99")
+        OshDataset(ds.root, benchmark="v99")

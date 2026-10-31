@@ -10,7 +10,7 @@ from dataclasses import asdict, dataclass, field
 
 import numpy as np
 
-from .dataset import OshdDataset
+from .dataset import OshDataset
 from .geometry import quat_to_rotmat
 from .hub import SIM_MODALITIES
 from .labels import nearest_indices
@@ -204,7 +204,7 @@ def _sim_goal_metrics(traj, rep, tol_m, tol_deg):
         rep.warnings.append(f"orientation missed: final error {ang:.1f} deg")
 
 
-def dataset_report(ds: OshdDataset, trajectories: list[str] | None = None, **kw) -> list[TrajectoryReport]:
+def dataset_report(ds: OshDataset, trajectories: list[str] | None = None, **kw) -> list[TrajectoryReport]:
     names = trajectories or ds.local_trajectory_names
     return [trajectory_report(ds[t], **kw) for t in names]
 

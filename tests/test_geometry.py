@@ -1,7 +1,7 @@
 import numpy as np
 
-from oshd_dataset.calibration import CameraIntrinsics
-from oshd_dataset.geometry import (
+from oshd.calibration import CameraIntrinsics
+from oshd.geometry import (
     interpolate_poses,
     invert_pose,
     make_pose,
@@ -11,7 +11,7 @@ from oshd_dataset.geometry import (
     rotmat_to_quat,
     slerp,
 )
-from oshd_dataset.imaging import CameraView
+from oshd.imaging import CameraView
 
 
 def test_quat_roundtrip():

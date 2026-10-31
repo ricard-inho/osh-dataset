@@ -325,7 +325,7 @@ class Trajectory:
         return None if t is None else self.root / "models" / "sim" / t["model"] / "model.obj"
 
     def target_mesh(self, scaled: bool = True):
-        """The target's CAD as a ``trimesh.Trimesh`` (needs ``oshd-dataset[mesh]``), in the
+        """The target's CAD as a ``trimesh.Trimesh`` (needs ``oshd[mesh]``), in the
         ``target`` body frame, scaled to this trajectory unless ``scaled=False``."""
         import trimesh
 

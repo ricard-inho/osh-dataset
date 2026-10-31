@@ -1,7 +1,7 @@
-# oshd-dataset
+# oshd
 
 Download, synchronize and turn the OSHD multimodal robotics dataset
-([`r3m3c3/off_test`](https://huggingface.co/datasets/r3m3c3/off_test) on the Hugging Face Hub)
+([`r3m3c3/oshd`](https://huggingface.co/datasets/r3m3c3/oshd) on the Hugging Face Hub)
 into training data for **6D pose estimation, object detection, segmentation and optical
 flow**.
 
@@ -20,18 +20,18 @@ steps. See [Simulated data](#simulated-data).
 ## Install
 
 ```bash
-pip install oshd-dataset            # core: download, read, sync, labels, exports
-pip install "oshd-dataset[torch]"   # + PyTorch Dataset wrappers
-pip install "oshd-dataset[mesh]"    # + loading CAD meshes (.ply/.obj/.stl)
-pip install "oshd-dataset[viz]"     # + the Rerun playback dashboard (oshd viz)
-pip install "oshd-dataset[calib]"   # + calibration tools (oshd align-markers, oshd calibrate)
-pip install "oshd-dataset[all]"     # everything above
-pip install "oshd-dataset[torch,viz]"   # or any combination
+pip install oshd            # core: download, read, sync, labels, exports
+pip install "oshd[torch]"   # + PyTorch Dataset wrappers
+pip install "oshd[mesh]"    # + loading CAD meshes (.ply/.obj/.stl)
+pip install "oshd[viz]"     # + the Rerun playback dashboard (oshd viz)
+pip install "oshd[calib]"   # + calibration tools (oshd align-markers, oshd calibrate)
+pip install "oshd[all]"     # everything above
+pip install "oshd[torch,viz]"   # or any combination
 
 # with uv
-uv add "oshd-dataset[all]"          # in a uv project
-uv pip install "oshd-dataset[all]"  # into the active environment
-uv tool install "oshd-dataset[viz]" # just the `oshd` CLI, isolated, on your PATH
+uv add "oshd[all]"          # in a uv project
+uv pip install "oshd[all]"  # into the active environment
+uv tool install "oshd[viz]" # just the `oshd` CLI, isolated, on your PATH
 ```
 
 Python ≥ 3.10. No OpenCV or ROS needed.
@@ -57,7 +57,7 @@ oshd check                                     # which calibration / CAD inputs 
 Without `-t`, `--domain` picks what is downloaded (default `real`), and `--split` / `--task`
 narrow it down. With `-t`, the named trajectories are downloaded whatever their domain.
 
-The default location is `~/.cache/oshd_dataset/<repo>`. Override it with `--root` or
+The default location is `~/.cache/oshd/<repo>`. Override it with `--root` or
 `$OSHD_DATA_DIR`, and point at another repo with `--repo` / `$OSHD_REPO_ID`.
 
 ## Inspect trajectories: is it good or bad?
@@ -124,7 +124,7 @@ The current dataset already has both for `cubesat` and `realsense_color`. The st
 are for a new object, a re-built rigid body, or another camera.
 
 ```bash
-pip install "oshd-dataset[calib]"
+pip install "oshd[calib]"
 oshd download -m realsense_color -m mocap
 
 # 1) object: Motive export + the marker centres in the CAD (here Onshape mm, Z-up part
@@ -172,7 +172,7 @@ The results are also copied into your local dataset right away. Check them with
 `oshd viz -m <camera> -m mocap`, which draws the masks on the images. Then share them:
 
 ```bash
-hf upload r3m3c3/off_test oshd_calibration . --repo-type dataset --exclude 'overlays_*/*'
+hf upload r3m3c3/oshd oshd_calibration . --repo-type dataset --exclude 'overlays_*/*'
 ```
 
 ## Real targets
@@ -199,10 +199,10 @@ T_realsense_color_cam`, with the RealSense's `T_body_cam` from `calibration/rig.
 ## Read and synchronize
 
 ```python
-from oshd_dataset import OshdDataset
-from oshd_dataset.labels import nearest_indices
+from oshd import OshDataset
+from oshd.labels import nearest_indices
 
-ds = OshdDataset.download(modalities=["mocap", "realsense_color", "realsense_depth", "events"])
+ds = OshDataset.download(modalities=["mocap", "realsense_color", "realsense_depth", "events"])
 traj = ds["trajectory_007"]
 
 rgb   = traj.frame("realsense_color", 100)        # (480, 640, 3) uint8
@@ -218,15 +218,15 @@ t, obs = traj.message_array("/pingu_low_level")   # (N, D) policy observations
 t, act = traj.message_array("/minimal_thruster_command_to_px4")
 ```
 
-Event representations: `oshd_dataset.events.event_histogram`, `voxel_grid`, `time_surface`.
+Event representations: `oshd.events.event_histogram`, `voxel_grid`, `time_surface`.
 
 ## Training data
 
 Every task splits by **trajectory** (`splits.json` on the Hub) and returns dicts of numpy
-arrays. Use `oshd_dataset.torch` for PyTorch.
+arrays. Use `oshd.torch` for PyTorch.
 
 ```python
-from oshd_dataset.tasks import PoseEstimation, ObjectDetection, Segmentation, OpticalFlow
+from oshd.tasks import PoseEstimation, ObjectDetection, Segmentation, OpticalFlow
 
 pose = PoseEstimation(ds, "train", camera="firefly", undistort=True, image_size=(1536, 1024))
 s = pose[0]            # image, K, poses (N, 4, 4) T_cam_model, object_ids, valid
@@ -242,7 +242,7 @@ eflow = OpticalFlow(ds, "train", camera="events", window_ns=50_000_000)  # voxel
 
 ```python
 import torch
-from oshd_dataset.torch import TorchDataset, detection_collate
+from oshd.torch import TorchDataset, detection_collate
 
 loader = torch.utils.data.DataLoader(TorchDataset(det), batch_size=8,
                                      collate_fn=detection_collate, num_workers=4)
@@ -256,7 +256,7 @@ flow comes from RealSense depth moved by the camera and object motion measured b
 > **Labels need calibration.** They work today for the `cubesat` in the RealSense colour
 > camera (trajectories 007–009). Other cameras raise `MissingCalibrationError` until they are
 > calibrated (see "Calibrate" above). Run `oshd check` for the current status and see
-> [DATA_REQUIREMENTS.md](https://github.com/ricard-inho/oshd-dataset/blob/main/DATA_REQUIREMENTS.md).
+> [DATA_REQUIREMENTS.md](https://github.com/ricard-inho/osh-dataset/blob/main/DATA_REQUIREMENTS.md).
 
 ## Simulated data
 
@@ -275,10 +275,10 @@ the prefix: they are read like the real ones, with their own modality names.
 | `steps` | policy steps at 10 Hz: action, observation, rewards, goal errors (`traj.steps()`) |
 
 ```python
-from oshd_dataset import OshdDataset
-from oshd_dataset.labels import camera_pose
+from oshd import OshDataset
+from oshd.labels import camera_pose
 
-ds = OshdDataset.download(domain="sim_3d", modalities=["rgb", "depth", "semantic", "mocap"])
+ds = OshDataset.download(domain="sim_3d", modalities=["rgb", "depth", "semantic", "mocap"])
 ds.scenarios()                         # {"orbital/iss/earth": [...], ...}
 ds.split("train", domain="sim_3d")     # train / test by recording run (splits.json)
 ds.split("test", domain="sim_zerog", task="docking")
@@ -307,7 +307,7 @@ traj.target_model_path       # models/sim/<model>/model.obj (unscaled)
 
 Calibration comes from the simulation (`calibration/<trajectory>.yaml`): intrinsics, and each
 sensor's mount on the robot base, read as extrinsics on the `robot` mocap body (cameras in
-their optical frame). So `oshd_dataset.labels.camera_pose`, `traj.body_pose("target", t)` and
+their optical frame). So `oshd.labels.camera_pose`, `traj.body_pose("target", t)` and
 `OpticalFlow(ds, ..., camera="rgb" | "events")` work as for the real data. The object tasks
 (`PoseEstimation`, `ObjectDetection`, `Segmentation`) need a CAD model of a real target
 (see [Real targets](#real-targets)) and are real-data only; in simulation, the `semantic` images give the
@@ -337,12 +337,12 @@ are in none. Pin `--revision` to cite one version of the file.
 
 The split above grows every day. Paper numbers use a **frozen benchmark** instead: the data of
 one Hub revision with a fixed train / test split. It ships with the package
-(`oshd_dataset/benchmarks/v1.json`), and the Hub's `splits.json` carries a copy.
+(`oshd/benchmarks/v1.json`), and the Hub's `splits.json` carries a copy.
 
 | benchmark | Hub revision | trajectories | train / test |
 |---|---|---|---|
 | `v1` (`benchmark_v1`, frozen 2026-10-20) | `8205a11` | 2195 sim + 3 real | sim_3d/approach 378 / 93, sim_3d/orbit 800 / 201, sim_zerog/docking 300 / 72, sim_zerog/inspection 282 / 69, real 2 / 1 |
-| **`v2`** (`benchmark_v2`, frozen 2026-10-31, oshd-dataset 1.0.0) | `df3530b` | 6413 sim + 92 real | sim_3d/approach 1089 / 186, sim_3d/orbit 2528 / 522, sim_zerog/docking 921 / 162, sim_zerog/inspection 861 / 144, real/antena 24 / 6, real/antena_1_solar 49 / 10, real/cubesat 2 / 1 |
+| **`v2`** (`benchmark_v2`, frozen 2026-10-31, oshd 1.0.0) | `df3530b` | 6413 sim + 92 real | sim_3d/approach 1089 / 186, sim_3d/orbit 2528 / 522, sim_zerog/docking 921 / 162, sim_zerog/inspection 861 / 144, real/antena 24 / 6, real/antena_1_solar 49 / 10, real/cubesat 2 / 1 |
 
 `v2` is the final data collection: every simulated campaign and every real recording with a
 target model (the CubeSat and both mockups, with their CAD, rig calibration and real lighting
@@ -355,7 +355,7 @@ oshd splits --benchmark v2
 ```
 
 ```python
-ds = OshdDataset.download(benchmark="v2", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
+ds = OshDataset.download(benchmark="v2", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
 ds.split("test", domain="sim_zerog", task="docking", benchmark="v2")
 ```
 
@@ -374,7 +374,7 @@ oshd export yolo --camera firefly --size 1536 1024 --split train --out out/yolo
 oshd extract-frames -m firefly --stride 10 --out out/frames               # raw JPEGs + timestamps.csv
 ```
 
-The same exporters are available from Python in `oshd_dataset.export`. Frames that are not
+The same exporters are available from Python in `oshd.export`. Frames that are not
 resized or undistorted are copied byte-for-byte, with no re-encoding.
 
 ## Development
@@ -385,7 +385,7 @@ uv run pytest        # tests run on a synthetic dataset with analytically known 
 uv run ruff check
 ```
 
-Release: bump `__version__` in `src/oshd_dataset/__init__.py`, tag `vX.Y.Z` and push the tag.
+Release: bump `__version__` in `src/oshd/__init__.py`, tag `vX.Y.Z` and push the tag.
 The `publish` GitHub workflow builds the package and uploads it to PyPI via trusted publishing.
 
 Code: MIT. Data: CC-BY-4.0.

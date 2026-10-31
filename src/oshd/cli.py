@@ -14,9 +14,9 @@ from .splits import BENCHMARKS, EVAL_FRACTION
 
 
 def _dataset(args):
-    from .dataset import OshdDataset
+    from .dataset import OshDataset
 
-    return OshdDataset(args.root, args.repo)
+    return OshDataset(args.root, args.repo)
 
 
 def cmd_download(args) -> None:

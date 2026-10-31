@@ -1,6 +1,6 @@
 # Calibration and model files: status and what is still needed
 
-`oshd-dataset` can download, read and synchronize every modality. Ground-truth **labels**
+`oshd` can download, read and synchronize every modality. Ground-truth **labels**
 (6D pose, masks, boxes, optical flow) are computed from motion capture, and they need the
 calibration and model files below. A label task for a camera or object that is not
 calibrated yet raises `MissingCalibrationError`, pointing here.
@@ -22,7 +22,7 @@ trajectory_007
   events             intrinsics --  extrinsics --
 ```
 
-All files go in the **Hub dataset repo** (`r3m3c3/off_test`), not in this Python package,
+All files go in the **Hub dataset repo** (`r3m3c3/oshd`), not in this Python package,
 so everyone gets them with `oshd download` and they can be versioned with the data.
 
 Conventions used everywhere:
@@ -223,8 +223,8 @@ hash of the trajectory name and prints a warning. Add new trajectories to the fi
 they are uploaded, and never move old ones between splits. Bump `version` whenever the
 file changes, so results can cite it.
 
-The simulated trajectories are added by `oshd_dataset.splits.update_sim_splits`, which the sim
-publisher (`oshd_dataset_pipeline/sim/publish_hf.py`) runs on every upload; `oshd splits update
+The simulated trajectories are added by `oshd.splits.update_sim_splits`, which the sim
+publisher (`osh_dataset_pipeline/sim/publish_hf.py`) runs on every upload; `oshd splits update
 --push` does the same by hand. It is append-only, keeps every listed trajectory (real ones
 too), puts all episodes of a recording run in one split and sends ~20% of the runs of each
 scenario config to `test`. Simulated trajectories not listed yet are in no split.
@@ -240,9 +240,9 @@ simulation scenarios are the *Hub viewer's* splits: they group the data for brow
 exposed as `ds.hub_splits`, not used for training.
 
 Frozen benchmarks for papers (`benchmark_v1`: Hub revision `8205a11`, 2195 sim + 3 real
-trajectories, train 1762 / test 436) ship with the package (`oshd_dataset/benchmarks/`). They
+trajectories, train 1762 / test 436) ship with the package (`oshd/benchmarks/`). They
 are copied unchanged into `splits.json` and fix the split of their trajectories. A
-new benchmark is a new file, never an edit. `benchmark_v2` (oshd-dataset 1.0.0: Hub revision
+new benchmark is a new file, never an edit. `benchmark_v2` (oshd 1.0.0: Hub revision
 `df3530b`, 6413 sim + 92 real trajectories, train 5474 / test 1031) is the final collection.
 
 ## 10. Trajectory metadata — `manifest.json`

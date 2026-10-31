@@ -17,7 +17,7 @@ jobs:
       - name: Tag must match package version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          version=$(uv run python -c "import oshd_dataset; print(oshd_dataset.__version__)")
+          version=$(uv run python -c "import oshd; print(oshd.__version__)")
           test "v$version" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != v$version"; exit 1; }
       - run: uv build
       - uses: actions/upload-artifact@v4

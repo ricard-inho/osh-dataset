@@ -79,7 +79,7 @@ class ObjectModel:
         try:
             import trimesh
         except ImportError as e:  # pragma: no cover
-            raise ImportError("Loading CAD meshes needs `pip install oshd-dataset[mesh]`") from e
+            raise ImportError("Loading CAD meshes needs `pip install oshd[mesh]`") from e
         mesh = trimesh.load(path, force="mesh", process=False)
         return cls(name=name, vertices=np.asarray(mesh.vertices, float) * scale,
                    faces=np.asarray(mesh.faces, np.int64), mesh_path=Path(path), **kw)

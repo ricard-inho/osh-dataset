@@ -26,7 +26,7 @@ import numpy as np
 import yaml
 
 from .calibration import CameraIntrinsics
-from .dataset import OshdDataset
+from .dataset import OshDataset
 from .geometry import (
     invert_pose,
     project_points,
@@ -269,7 +269,7 @@ def solve(
 # ------------------------------------------------------------- dataset io
 
 
-def select_frames(ds: OshdDataset, camera: str, obj: ObjectModel, rig_body: str, n: int,
+def select_frames(ds: OshDataset, camera: str, obj: ObjectModel, rig_body: str, n: int,
                   trajectories: list[str] | None = None, step: int = 3,
                   exclude: set[tuple[str, int]] = frozenset()):
     """Frames where rig and object are tracked, ordered for diversity of the rig-to-object
@@ -314,7 +314,7 @@ def select_frames(ds: OshdDataset, camera: str, obj: ObjectModel, rig_body: str,
     return [cands[i] for i in order]
 
 
-def observations_from_clicks(ds: OshdDataset, clicks: dict, obj: ObjectModel) -> list[Observation]:
+def observations_from_clicks(ds: OshDataset, clicks: dict, obj: ObjectModel) -> list[Observation]:
     obs = []
     rig_body, camera = clicks["rig_body"], clicks["camera"]
     for c in clicks["frames"]:
@@ -335,7 +335,7 @@ def _T_to_yaml(T: np.ndarray) -> dict:
             "rotation_xyzw": [round(float(x), 6) for x in rotmat_to_quat(T[:3, :3])]}
 
 
-def write_outputs(ds: OshdDataset, res: CalibrationResult, camera: str, obj: ObjectModel,
+def write_outputs(ds: OshDataset, res: CalibrationResult, camera: str, obj: ObjectModel,
                   rig_body: str, out_dir: Path, also: list[str] = (), refine_model: bool = True) -> list[Path]:
     """Write ``calibration/rig.yaml`` and ``models/objects.yaml`` under ``out_dir``, laid out
     like the Hub repo (so the folder can be uploaded as-is). Existing entries are kept."""
@@ -381,7 +381,7 @@ def write_outputs(ds: OshdDataset, res: CalibrationResult, camera: str, obj: Obj
     return written
 
 
-def write_object_transform(ds: OshdDataset, obj_name: str, T_body_model: np.ndarray, out_dir: Path,
+def write_object_transform(ds: OshDataset, obj_name: str, T_body_model: np.ndarray, out_dir: Path,
                            note: str, extra: dict | None = None) -> Path:
     """Update one object's ``T_body_model`` in ``<out_dir>/models/objects.yaml``."""
     obj_path = Path(out_dir) / "models" / "objects.yaml"

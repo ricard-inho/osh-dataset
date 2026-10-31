@@ -1,4 +1,4 @@
-"""Synchronized playback of trajectories in the Rerun viewer (``pip install oshd-dataset[viz]``).
+"""Synchronized playback of trajectories in the Rerun viewer (``pip install oshd[viz]``).
 
 Every trajectory becomes one Rerun *recording* on a shared ``time`` timeline (seconds from
 the trajectory start), with:
@@ -19,7 +19,7 @@ try:
     import rerun as rr
     import rerun.blueprint as rrb
 except ImportError as e:  # pragma: no cover
-    raise ImportError("visualization needs Rerun: `pip install oshd-dataset[viz]`") from e
+    raise ImportError("visualization needs Rerun: `pip install oshd[viz]`") from e
 
 from .events import EVENT_SENSOR_SIZE, event_histogram
 from .quality import GOAL_TOPIC, ROBOT_BODY, yaw_from_quat
@@ -28,7 +28,7 @@ from .trajectory import DEPTH_MODALITIES, Trajectory
 __all__ = ["log_trajectory", "blueprint", "render_events", "visualize"]
 
 TIMELINE = "time"
-APP_ID = "oshd_dataset"
+APP_ID = "oshd"
 BODY_COLORS = {"floatingplatform": (255, 140, 0), "SensorStack": (60, 160, 255), "cubesat": (80, 220, 120)}
 THRUSTER_TOPIC = "/minimal_thruster_command_to_px4"
 RW_TOPIC = "/rw_effort_controller/commands"

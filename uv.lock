@@ -786,7 +786,7 @@ wheels = [
 ]
 
 [[package]]
-name = "oshd-dataset"
+name = "oshd"
 source = { editable = "." }
 dependencies = [
     { name = "huggingface-hub" },

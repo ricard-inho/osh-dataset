@@ -2,15 +2,15 @@ import numpy as np
 import pytest
 from conftest import FRAME_DT, N_FRAMES, SIM_TRAJ, SPEED, T0, H, W
 
-from oshd_dataset import MissingCalibrationError
-from oshd_dataset.events import event_histogram, time_surface, voxel_grid
-from oshd_dataset.labels import (
+from oshd import MissingCalibrationError
+from oshd.events import event_histogram, time_surface, voxel_grid
+from oshd.labels import (
     mask_to_bbox,
     nearest_indices,
     object_pose_in_camera,
     render_mask,
 )
-from oshd_dataset.splits import hash_split
+from oshd.splits import hash_split
 
 
 def test_structure(ds):
@@ -87,7 +87,7 @@ def test_hash_split_stable():
 
 
 def test_fill_mask_holes():
-    from oshd_dataset.labels import fill_mask_holes
+    from oshd.labels import fill_mask_holes
 
     m = np.zeros((20, 30), bool)
     m[3:15, 4:20] = True

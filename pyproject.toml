@@ -3,7 +3,7 @@ requires = ["hatchling>=1.21"]
 build-backend = "hatchling.build"
 
 [project]
-name = "oshd-dataset"
+name = "oshd"
 dynamic = ["version"]
 description = "Download, synchronize and turn the OSHD multimodal robotics dataset (events, RGB-D, lidar, mocap) into pose-estimation, detection, segmentation and optical-flow training data."
 readme = "README.md"
@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# PyTorch Dataset wrappers (oshd_dataset.torch)
+# PyTorch Dataset wrappers (oshd.torch)
 torch = ["torch>=2.0"]
 # Loading CAD meshes (.ply/.obj/.stl) for mask / box rendering
 mesh = ["trimesh>=4.0"]
@@ -41,28 +41,28 @@ mesh = ["trimesh>=4.0"]
 viz = ["rerun-sdk>=0.38"]
 # oshd calibrate / align-markers (the click page itself needs nothing extra)
 calib = ["trimesh>=4.0"]
-all = ["oshd-dataset[torch,mesh,viz,calib]"]
+all = ["oshd[torch,mesh,viz,calib]"]
 
 [project.urls]
-Homepage = "https://github.com/ricard-inho/oshd-dataset"
-Issues = "https://github.com/ricard-inho/oshd-dataset/issues"
-Documentation = "https://github.com/ricard-inho/oshd-dataset#readme"
-Dataset = "https://huggingface.co/datasets/r3m3c3/off_test"
+Homepage = "https://github.com/ricard-inho/osh-dataset"
+Issues = "https://github.com/ricard-inho/osh-dataset/issues"
+Documentation = "https://github.com/ricard-inho/osh-dataset#readme"
+Dataset = "https://huggingface.co/datasets/r3m3c3/oshd"
 
 [project.scripts]
-oshd = "oshd_dataset.cli:main"
+oshd = "oshd.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.5", "trimesh>=4.0", "rerun-sdk>=0.38"]
 
 [tool.hatch.version]
-path = "src/oshd_dataset/__init__.py"
+path = "src/oshd/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/oshd_dataset"]
+packages = ["src/oshd"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/oshd_dataset", "tests", "README.md", "DATA_REQUIREMENTS.md", "LICENSE"]
+include = ["src/oshd", "tests", "README.md", "DATA_REQUIREMENTS.md", "LICENSE"]
 
 [tool.ruff]
 line-length = 100

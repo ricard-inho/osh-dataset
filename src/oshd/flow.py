@@ -84,7 +84,7 @@ def optical_flow(
     """Dense flow GT for ``camera`` from ``t0_ns`` to ``t1_ns``.
 
     ``intr`` overrides the camera's intrinsics (e.g. an undistorted / resized
-    :class:`~oshd_dataset.imaging.CameraView`). ``depth_modality`` defaults to the
+    :class:`~oshd.imaging.CameraView`). ``depth_modality`` defaults to the
     trajectory's depth camera (``realsense_depth``, or ``depth`` in simulation). Returns
     ``(flow, valid)``.
     """

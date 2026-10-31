@@ -202,6 +202,6 @@ def fake_root(tmp_path_factory):
 
 @pytest.fixture()
 def ds(fake_root):
-    from oshd_dataset import OshdDataset
+    from oshd import OshDataset
 
-    return OshdDataset(fake_root, repo_id="test/fake")
+    return OshDataset(fake_root, repo_id="test/fake")

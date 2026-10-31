@@ -118,7 +118,7 @@ def load_splits(root: Path, trajectories: list[str], unlisted: Iterable[str] = (
 
 RULE = ("simulated: per recording run, the eval fraction of the runs of each scenario config in test; real: per "
         "lighting setting (target, colour temperature, intensity), the eval fraction of each target's trajectories "
-        "in test; real trajectories without a target model are in no split. Append-only (oshd_dataset.splits)")
+        "in test; real trajectories without a target model are in no split. Append-only (oshd.splits)")
 
 
 def light_setting(light: dict | None) -> tuple:
