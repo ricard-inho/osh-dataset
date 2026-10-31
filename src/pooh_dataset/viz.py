@@ -249,8 +249,8 @@ def log_trajectory(
                 rr.send_columns(f"plots/imu/{name}", indexes=tcol(ts), columns=rr.Scalars.columns(scalars=vals),
                                 recording=rec)
 
-    objs_here = [o for o in objects or () if o.present_in(traj.name)
-                 and traj.has("mocap") and o.mocap_body in traj.mocap_bodies]
+    objs_here = [o for o in objects or () if o.present_in(traj.name) and traj.has("mocap")
+                 and (o.mocap_body in traj.mocap_bodies or traj.name in o.static_poses)]
     if labels and objs_here:
         rec.log("cams", rr.AnnotationContext(
             [rr.AnnotationInfo(id=o.class_id, label=o.name, color=_color(o.mocap_body, k))

@@ -136,3 +136,19 @@ def test_real_targets():
     objects = {"cubesat": {"trajectories": ["trajectory_007"]}, "other": {"box": [1, 1, 1]}}
     assert real_targets(objects, {"trajectory_010": {"model": "antena"}}) == {
         "trajectory_007": "cubesat", "trajectory_010": "antena"}
+
+
+def test_mockup_override_and_simple_mesh(tmp_path):
+    pytest.importorskip("trimesh")
+    write_models(tmp_path, {"trajectory_010": {"model": "antena"}, "trajectory_040": {"model": "antena_1_solar"}},
+                 {"cubesat": {"class_id": 1, "box": [0.1] * 3, "trajectories": ["trajectory_007"]},
+                  "antena": {"class_id": 2, "mocap_body": MOCKUP_BODY,
+                             "T_body_model": {"translation": [0, 0, 0], "rotation_xyzw": [0, 0, 1, 0]}}})
+    simple = tmp_path / "real" / "antena" / "model_simple.obj"
+    simple.write_text("\n".join(CUBE_OBJ.splitlines()[:8]) + "\nf 1 2 4\n")
+    objs = load_object_models(tmp_path)
+    a = objs["antena"]
+    assert a.class_id == 2 and np.allclose(a.T_body_model[:3, :3], np.diag([-1, -1, 1]))
+    assert len(a.faces) == 1 and a.mesh_path.name == "model.obj"  # labels: simple mesh; source: full
+    assert a.trajectories == ["trajectory_010"]
+    assert objs["antena_1_solar"].class_id == 3 and len(objs["antena_1_solar"].faces) == 12

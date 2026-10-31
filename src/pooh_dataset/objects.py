@@ -116,6 +116,10 @@ def load_object_models(models_dir: Path) -> dict[str, ObjectModel]:
                                            scale=float(d.get("mesh_scale", 1.0)), **common)
         elif "box" in d:
             m = ObjectModel.from_box(name, d["box"], **common)
+        elif (models_dir / "real" / name).is_dir():  # a mockup: its CAD is in models/real/<name>/
+            m = _mockup_model(models_dir, name, **common)
+            if m is None:
+                continue
         else:
             raise ValueError(f"models/objects.yaml: {name!r} needs either `mesh` or `box`")
         m.symmetries = d.get("symmetries")
@@ -131,8 +135,8 @@ def load_object_models(models_dir: Path) -> dict[str, ObjectModel]:
 
 def _add_mockups(out: dict[str, ObjectModel], models_dir: Path) -> None:
     """The real mockups (``models/real/``) as objects on the ``target`` mocap body. An entry of
-    the same name in objects.yaml wins (e.g. to set ``T_body_model``); its trajectories and
-    static poses are filled in from mockups.json."""
+    the same name in objects.yaml (without ``mesh``) wins, e.g. to set ``class_id`` and
+    ``T_body_model``; its trajectories and static poses are filled in from mockups.json."""
     path = models_dir / "real" / "mockups.json"
     if not path.exists():
         return
@@ -143,12 +147,9 @@ def _add_mockups(out: dict[str, ObjectModel], models_dir: Path) -> None:
     for name, entries in sorted(by_mockup.items()):
         m = out.get(name)
         if m is None:
-            mesh = models_dir / "real" / name / "model.obj"
-            if not mesh.exists():
-                warnings.warn(f"models/real/{name}: no model.obj; mockup {name!r} has no object model",
-                              stacklevel=3)
+            m = _mockup_model(models_dir, name, class_id=next_id, mocap_body=MOCKUP_BODY)
+            if m is None:
                 continue
-            m = ObjectModel.from_mesh_file(name, mesh, class_id=next_id, mocap_body=MOCKUP_BODY)
             next_id += 1
             out[name] = m
         if m.trajectories is None:
@@ -158,3 +159,17 @@ def _add_mockups(out: dict[str, ObjectModel], models_dir: Path) -> None:
             if p is not None and traj not in m.static_poses:
                 m.static_poses[traj] = make_pose(np.asarray(p["position"], float),
                                                  np.asarray(p["orientation_xyzw"], float))
+
+
+def _mockup_model(models_dir: Path, name: str, **kw) -> ObjectModel | None:
+    """Mockup ``name`` from ``models/real/<name>/``: the labels use ``model_simple.obj`` (a
+    watertight ~10k-face version with the same silhouette) when it is there, ``mesh_path`` is
+    the full ``model.obj``."""
+    folder = models_dir / "real" / name
+    full, simple = folder / "model.obj", folder / "model_simple.obj"
+    if not full.exists():
+        warnings.warn(f"models/real/{name}: no model.obj; mockup {name!r} has no object model", stacklevel=4)
+        return None
+    m = ObjectModel.from_mesh_file(name, simple if simple.exists() else full, **kw)
+    m.mesh_path = full
+    return m
