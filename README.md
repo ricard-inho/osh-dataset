@@ -1,6 +1,6 @@
-# pooh-dataset
+# oshd-dataset
 
-Download, synchronize and turn the POOH multimodal robotics dataset
+Download, synchronize and turn the OSHD multimodal robotics dataset
 ([`r3m3c3/off_test`](https://huggingface.co/datasets/r3m3c3/off_test) on the Hugging Face Hub)
 into training data for **6D pose estimation, object detection, segmentation and optical
 flow**.
@@ -20,18 +20,18 @@ steps. See [Simulated data](#simulated-data).
 ## Install
 
 ```bash
-pip install pooh-dataset            # core: download, read, sync, labels, exports
-pip install "pooh-dataset[torch]"   # + PyTorch Dataset wrappers
-pip install "pooh-dataset[mesh]"    # + loading CAD meshes (.ply/.obj/.stl)
-pip install "pooh-dataset[viz]"     # + the Rerun playback dashboard (pooh viz)
-pip install "pooh-dataset[calib]"   # + calibration tools (pooh align-markers, pooh calibrate)
-pip install "pooh-dataset[all]"     # everything above
-pip install "pooh-dataset[torch,viz]"   # or any combination
+pip install oshd-dataset            # core: download, read, sync, labels, exports
+pip install "oshd-dataset[torch]"   # + PyTorch Dataset wrappers
+pip install "oshd-dataset[mesh]"    # + loading CAD meshes (.ply/.obj/.stl)
+pip install "oshd-dataset[viz]"     # + the Rerun playback dashboard (oshd viz)
+pip install "oshd-dataset[calib]"   # + calibration tools (oshd align-markers, oshd calibrate)
+pip install "oshd-dataset[all]"     # everything above
+pip install "oshd-dataset[torch,viz]"   # or any combination
 
 # with uv
-uv add "pooh-dataset[all]"          # in a uv project
-uv pip install "pooh-dataset[all]"  # into the active environment
-uv tool install "pooh-dataset[viz]" # just the `pooh` CLI, isolated, on your PATH
+uv add "oshd-dataset[all]"          # in a uv project
+uv pip install "oshd-dataset[all]"  # into the active environment
+uv tool install "oshd-dataset[viz]" # just the `oshd` CLI, isolated, on your PATH
 ```
 
 Python ≥ 3.10. No OpenCV or ROS needed.
@@ -42,31 +42,31 @@ Data is large (≈ 11 GB per trajectory, mostly Firefly frames), so download onl
 need. Downloads resume, and a rerun only fetches files that are new on the Hub.
 
 ```bash
-pooh download                                  # all real data
-pooh download -m mocap -m realsense_color -m realsense_depth
-pooh download -t trajectory_007 -m events
-pooh download --domain sim_3d -m rgb -m mocap  # simulated: synthetic, sim_3d, sim_zerog; all = both
-pooh download --domain sim_zerog --task docking --split test   # one simulated task, eval runs only
-pooh download --benchmark v1 --domain sim_zerog --task docking --split test  # same, frozen paper benchmark
-pooh download --revision <commit-sha>          # pin a dataset version for a paper
-pooh info                                      # what is local / remote, splits
-pooh splits                                    # train / val / test counts per domain and task
-pooh check                                     # which calibration / CAD inputs exist
+oshd download                                  # all real data
+oshd download -m mocap -m realsense_color -m realsense_depth
+oshd download -t trajectory_007 -m events
+oshd download --domain sim_3d -m rgb -m mocap  # simulated: synthetic, sim_3d, sim_zerog; all = both
+oshd download --domain sim_zerog --task docking --split test   # one simulated task, eval runs only
+oshd download --benchmark v1 --domain sim_zerog --task docking --split test  # same, frozen paper benchmark
+oshd download --revision <commit-sha>          # pin a dataset version for a paper
+oshd info                                      # what is local / remote, splits
+oshd splits                                    # train / val / test counts per domain and task
+oshd check                                     # which calibration / CAD inputs exist
 ```
 
 Without `-t`, `--domain` picks what is downloaded (default `real`), and `--split` / `--task`
 narrow it down. With `-t`, the named trajectories are downloaded whatever their domain.
 
-The default location is `~/.cache/pooh_dataset/<repo>`. Override it with `--root` or
-`$POOH_DATA_DIR`, and point at another repo with `--repo` / `$POOH_REPO_ID`.
+The default location is `~/.cache/oshd_dataset/<repo>`. Override it with `--root` or
+`$OSHD_DATA_DIR`, and point at another repo with `--repo` / `$OSHD_REPO_ID`.
 
 ## Inspect trajectories: is it good or bad?
 
 **Health report**: runs in seconds on mocap + messages only.
 
 ```bash
-pooh download -m mocap -m robot_messages -m imu
-pooh quality                     # table + warnings; --json report.json for the full numbers
+oshd download -m mocap -m robot_messages -m imu
+oshd quality                     # table + warnings; --json report.json for the full numbers
 ```
 
 ```
@@ -86,12 +86,12 @@ arguments (`--goal-tol-cm`, `--body`).
 **Playback dashboard**: synchronized, scrubbable playback in [Rerun](https://rerun.io):
 
 ```bash
-pooh viz -t trajectory_007 --download        # fetches everything but Firefly, then opens the viewer
-pooh viz -t trajectory_007 -t trajectory_009 # several trajectories: switch in the recordings panel
-pooh viz -m mocap -m robot_messages          # all local trajectories, trajectory + actions only
-pooh viz -t trajectory_008 --start 10 --end 20 -m events -m realsense_color
-pooh viz -t trajectory_050 --web             # viewer in the browser (e.g. over SSH port-forward)
-pooh viz --save out/                         # write out/<trajectory>.rrd; open with `rerun out/*.rrd`
+oshd viz -t trajectory_007 --download        # fetches everything but Firefly, then opens the viewer
+oshd viz -t trajectory_007 -t trajectory_009 # several trajectories: switch in the recordings panel
+oshd viz -m mocap -m robot_messages          # all local trajectories, trajectory + actions only
+oshd viz -t trajectory_008 --start 10 --end 20 -m events -m realsense_color
+oshd viz -t trajectory_050 --web             # viewer in the browser (e.g. over SSH port-forward)
+oshd viz --save out/                         # write out/<trajectory>.rrd; open with `rerun out/*.rrd`
 ```
 
 The browser viewer holds at most ~4 GB and drops the **oldest** data beyond that: the start of
@@ -124,17 +124,17 @@ The current dataset already has both for `cubesat` and `realsense_color`. The st
 are for a new object, a re-built rigid body, or another camera.
 
 ```bash
-pip install "pooh-dataset[calib]"
-pooh download -m realsense_color -m mocap
+pip install "oshd-dataset[calib]"
+oshd download -m realsense_color -m mocap
 
 # 1) object: Motive export + the marker centres in the CAD (here Onshape mm, Z-up part
 #    exported Y-up, hence --cad-axes x,-z,y)
-pooh align-markers --motive models/CubeSat_U1.motive --cad-axes x,-z,y \
+oshd align-markers --motive models/CubeSat_U1.motive --cad-axes x,-z,y \
   --cad-marker 46.077 -46.03447 -117.99807 --cad-marker -47.35423 -47.40068 -121.5 \
   --cad-marker -47.35423 47.39831 -121.5 --cad-marker 47.44476 47.39831 -121.5
 
 # 2) camera: click the cube corners
-pooh calibrate --camera realsense_color --box-keypoints -0.05 0 -0.05 0.05 0.1 0.05
+oshd calibrate --camera realsense_color --box-keypoints -0.05 0 -0.05 0.05 0.1 0.05
 ```
 
 `align-markers` matches your CAD markers to Motive's (subset and order are found
@@ -142,11 +142,11 @@ automatically) and refuses a fit worse than 3 mm. Motive stores bodies Y-up and 
 stream is Z-up; the standard conversion is the default (`--motive-to-body x,-z,y`).
 
 `--box-keypoints` gives the cube body's 8 corners in CAD coordinates, excluding the marker
-holder. When `T_body_model` comes from `align-markers`, `pooh calibrate` only solves the
+holder. When `T_body_model` comes from `align-markers`, `oshd calibrate` only solves the
 camera (`--refine-model` overrides this). Solving both from clicks is unreliable: the
 camera position and the object position trade off.
 
-`pooh calibrate` prints a local URL (default http://localhost:8765) and opens it in your
+`oshd calibrate` prints a local URL (default http://localhost:8765) and opens it in your
 browser. On a remote machine, run `ssh -L 8765:localhost:8765 <host>` on your laptop and open
 the URL there.
 
@@ -160,7 +160,7 @@ N more later. After the first frames, yellow crosses show where the current solu
 predicts the corners. A result with RMS > 10 px, or with implausible offsets, is flagged and
 not written unless you pass `--force`.
 
-Outputs, in `pooh_calibration/` (git-ignored), laid out like the Hub repo:
+Outputs, in `oshd_calibration/` (git-ignored), laid out like the Hub repo:
 
 - `calibration/rig.yaml`: `T_body_cam` of the camera (`--also realsense_depth` gives the
   aligned depth camera the same transform)
@@ -169,10 +169,10 @@ Outputs, in `pooh_calibration/` (git-ignored), laid out like the Hub repo:
 - `overlays_<camera>/*.png`: rendered mask outline (green) and clicks (red), for checking
 
 The results are also copied into your local dataset right away. Check them with
-`pooh viz -m <camera> -m mocap`, which draws the masks on the images. Then share them:
+`oshd viz -m <camera> -m mocap`, which draws the masks on the images. Then share them:
 
 ```bash
-hf upload r3m3c3/off_test pooh_calibration . --repo-type dataset --exclude 'overlays_*/*'
+hf upload r3m3c3/off_test oshd_calibration . --repo-type dataset --exclude 'overlays_*/*'
 ```
 
 ## Real targets
@@ -199,10 +199,10 @@ T_realsense_color_cam`, with the RealSense's `T_body_cam` from `calibration/rig.
 ## Read and synchronize
 
 ```python
-from pooh_dataset import PoohDataset
-from pooh_dataset.labels import nearest_indices
+from oshd_dataset import OshdDataset
+from oshd_dataset.labels import nearest_indices
 
-ds = PoohDataset.download(modalities=["mocap", "realsense_color", "realsense_depth", "events"])
+ds = OshdDataset.download(modalities=["mocap", "realsense_color", "realsense_depth", "events"])
 traj = ds["trajectory_007"]
 
 rgb   = traj.frame("realsense_color", 100)        # (480, 640, 3) uint8
@@ -218,15 +218,15 @@ t, obs = traj.message_array("/pingu_low_level")   # (N, D) policy observations
 t, act = traj.message_array("/minimal_thruster_command_to_px4")
 ```
 
-Event representations: `pooh_dataset.events.event_histogram`, `voxel_grid`, `time_surface`.
+Event representations: `oshd_dataset.events.event_histogram`, `voxel_grid`, `time_surface`.
 
 ## Training data
 
 Every task splits by **trajectory** (`splits.json` on the Hub) and returns dicts of numpy
-arrays. Use `pooh_dataset.torch` for PyTorch.
+arrays. Use `oshd_dataset.torch` for PyTorch.
 
 ```python
-from pooh_dataset.tasks import PoseEstimation, ObjectDetection, Segmentation, OpticalFlow
+from oshd_dataset.tasks import PoseEstimation, ObjectDetection, Segmentation, OpticalFlow
 
 pose = PoseEstimation(ds, "train", camera="firefly", undistort=True, image_size=(1536, 1024))
 s = pose[0]            # image, K, poses (N, 4, 4) T_cam_model, object_ids, valid
@@ -242,7 +242,7 @@ eflow = OpticalFlow(ds, "train", camera="events", window_ns=50_000_000)  # voxel
 
 ```python
 import torch
-from pooh_dataset.torch import TorchDataset, detection_collate
+from oshd_dataset.torch import TorchDataset, detection_collate
 
 loader = torch.utils.data.DataLoader(TorchDataset(det), batch_size=8,
                                      collate_fn=detection_collate, num_workers=4)
@@ -255,8 +255,8 @@ flow comes from RealSense depth moved by the camera and object motion measured b
 
 > **Labels need calibration.** They work today for the `cubesat` in the RealSense colour
 > camera (trajectories 007–009). Other cameras raise `MissingCalibrationError` until they are
-> calibrated (see "Calibrate" above). Run `pooh check` for the current status and see
-> [DATA_REQUIREMENTS.md](https://github.com/ricard-inho/pooh-dataset/blob/main/DATA_REQUIREMENTS.md).
+> calibrated (see "Calibrate" above). Run `oshd check` for the current status and see
+> [DATA_REQUIREMENTS.md](https://github.com/ricard-inho/oshd-dataset/blob/main/DATA_REQUIREMENTS.md).
 
 ## Simulated data
 
@@ -275,10 +275,10 @@ the prefix: they are read like the real ones, with their own modality names.
 | `steps` | policy steps at 10 Hz: action, observation, rewards, goal errors (`traj.steps()`) |
 
 ```python
-from pooh_dataset import PoohDataset
-from pooh_dataset.labels import camera_pose
+from oshd_dataset import OshdDataset
+from oshd_dataset.labels import camera_pose
 
-ds = PoohDataset.download(domain="sim_3d", modalities=["rgb", "depth", "semantic", "mocap"])
+ds = OshdDataset.download(domain="sim_3d", modalities=["rgb", "depth", "semantic", "mocap"])
 ds.scenarios()                         # {"orbital/iss/earth": [...], ...}
 ds.split("train", domain="sim_3d")     # train / test by recording run (splits.json)
 ds.split("test", domain="sim_zerog", task="docking")
@@ -295,7 +295,7 @@ T_world_cam, ok = camera_pose(traj, "rgb", traj.timestamps("rgb")[0])
 
 **Target CAD.** Every simulated trajectory observes one target, and its CAD is on the Hub. The
 satellite mockup, ISS, Gateway and Venus Express come from SRB's assets; a `cubesat<seed>` is
-SimForge's procedural CubeSat, generated from the scenario seed. `pooh download` fetches the
+SimForge's procedural CubeSat, generated from the scenario seed. `oshd download` fetches the
 models of the trajectories it downloads (`models/sim/<model>/`: `model.obj` + `.mtl` + textures,
 and the simulator's `model.usdz`):
 
@@ -307,7 +307,7 @@ traj.target_model_path       # models/sim/<model>/model.obj (unscaled)
 
 Calibration comes from the simulation (`calibration/<trajectory>.yaml`): intrinsics, and each
 sensor's mount on the robot base, read as extrinsics on the `robot` mocap body (cameras in
-their optical frame). So `pooh_dataset.labels.camera_pose`, `traj.body_pose("target", t)` and
+their optical frame). So `oshd_dataset.labels.camera_pose`, `traj.body_pose("target", t)` and
 `OpticalFlow(ds, ..., camera="rgb" | "events")` work as for the real data. The object tasks
 (`PoseEstimation`, `ObjectDetection`, `Segmentation`) need a CAD model of a real target
 (see [Real targets](#real-targets)) and are real-data only; in simulation, the `semantic` images give the
@@ -321,7 +321,7 @@ Domains in `ds.split(..., domain=...)`: `real`, `synthetic` (all simulated), `si
 
 `splits.json` on the Hub lists the train and test (eval) trajectories; there is no simulated
 `val`. It is updated by the sim publisher every time new runs are uploaded (or by hand with
-`pooh splits update --push`), append-only: a trajectory never changes split. All episodes of
+`oshd splits update --push`), append-only: a trajectory never changes split. All episodes of
 one recording run (same scenario, same seed) are in the same split, and about 20% of the runs
 of each scenario config (target, background or arm, task) are in `test`, so every task has
 eval runs from every day of recording.
@@ -337,25 +337,25 @@ are in none. Pin `--revision` to cite one version of the file.
 
 The split above grows every day. Paper numbers use a **frozen benchmark** instead: the data of
 one Hub revision with a fixed train / test split. It ships with the package
-(`pooh_dataset/benchmarks/v1.json`), and the Hub's `splits.json` carries a copy.
+(`oshd_dataset/benchmarks/v1.json`), and the Hub's `splits.json` carries a copy.
 
 | benchmark | Hub revision | trajectories | train / test |
 |---|---|---|---|
 | `v1` (`benchmark_v1`, frozen 2026-10-20) | `8205a11` | 2195 sim + 3 real | sim_3d/approach 378 / 93, sim_3d/orbit 800 / 201, sim_zerog/docking 300 / 72, sim_zerog/inspection 282 / 69, real 2 / 1 |
-| **`v2`** (`benchmark_v2`, frozen 2026-10-31, pooh-dataset 1.0.0) | `df3530b` | 6413 sim + 92 real | sim_3d/approach 1089 / 186, sim_3d/orbit 2528 / 522, sim_zerog/docking 921 / 162, sim_zerog/inspection 861 / 144, real/antena 24 / 6, real/antena_1_solar 49 / 10, real/cubesat 2 / 1 |
+| **`v2`** (`benchmark_v2`, frozen 2026-10-31, oshd-dataset 1.0.0) | `df3530b` | 6413 sim + 92 real | sim_3d/approach 1089 / 186, sim_3d/orbit 2528 / 522, sim_zerog/docking 921 / 162, sim_zerog/inspection 861 / 144, real/antena 24 / 6, real/antena_1_solar 49 / 10, real/cubesat 2 / 1 |
 
 `v2` is the final data collection: every simulated campaign and every real recording with a
 target model (the CubeSat and both mockups, with their CAD, rig calibration and real lighting
 -setting split). It contains `v1`, and every `v1` trajectory keeps its split.
 
 ```bash
-pooh download --benchmark v2 --domain sim_zerog --task docking --split test -m rgb -m depth -m mocap
-pooh download --benchmark v2 --domain real --split test -m realsense_color -m realsense_depth -m mocap
-pooh splits --benchmark v2
+oshd download --benchmark v2 --domain sim_zerog --task docking --split test -m rgb -m depth -m mocap
+oshd download --benchmark v2 --domain real --split test -m realsense_color -m realsense_depth -m mocap
+oshd splits --benchmark v2
 ```
 
 ```python
-ds = PoohDataset.download(benchmark="v2", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
+ds = OshdDataset.download(benchmark="v2", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
 ds.split("test", domain="sim_zerog", task="docking", benchmark="v2")
 ```
 
@@ -368,13 +368,13 @@ groups of real trajectories); they organise the data and are not train / test sp
 ## Export to standard formats
 
 ```bash
-pooh export bop  --camera firefly         --split train --out out/bop     # undistorted, mm
-pooh export coco --camera realsense_color --split val   --out out/coco --stride 2
-pooh export yolo --camera firefly --size 1536 1024 --split train --out out/yolo
-pooh extract-frames -m firefly --stride 10 --out out/frames               # raw JPEGs + timestamps.csv
+oshd export bop  --camera firefly         --split train --out out/bop     # undistorted, mm
+oshd export coco --camera realsense_color --split val   --out out/coco --stride 2
+oshd export yolo --camera firefly --size 1536 1024 --split train --out out/yolo
+oshd extract-frames -m firefly --stride 10 --out out/frames               # raw JPEGs + timestamps.csv
 ```
 
-The same exporters are available from Python in `pooh_dataset.export`. Frames that are not
+The same exporters are available from Python in `oshd_dataset.export`. Frames that are not
 resized or undistorted are copied byte-for-byte, with no re-encoding.
 
 ## Development
@@ -385,7 +385,7 @@ uv run pytest        # tests run on a synthetic dataset with analytically known 
 uv run ruff check
 ```
 
-Release: bump `__version__` in `src/pooh_dataset/__init__.py`, tag `vX.Y.Z` and push the tag.
+Release: bump `__version__` in `src/oshd_dataset/__init__.py`, tag `vX.Y.Z` and push the tag.
 The `publish` GitHub workflow builds the package and uploads it to PyPI via trusted publishing.
 
 Code: MIT. Data: CC-BY-4.0.

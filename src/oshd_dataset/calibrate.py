@@ -26,7 +26,7 @@ import numpy as np
 import yaml
 
 from .calibration import CameraIntrinsics
-from .dataset import PoohDataset
+from .dataset import OshdDataset
 from .geometry import (
     invert_pose,
     project_points,
@@ -269,7 +269,7 @@ def solve(
 # ------------------------------------------------------------- dataset io
 
 
-def select_frames(ds: PoohDataset, camera: str, obj: ObjectModel, rig_body: str, n: int,
+def select_frames(ds: OshdDataset, camera: str, obj: ObjectModel, rig_body: str, n: int,
                   trajectories: list[str] | None = None, step: int = 3,
                   exclude: set[tuple[str, int]] = frozenset()):
     """Frames where rig and object are tracked, ordered for diversity of the rig-to-object
@@ -314,7 +314,7 @@ def select_frames(ds: PoohDataset, camera: str, obj: ObjectModel, rig_body: str,
     return [cands[i] for i in order]
 
 
-def observations_from_clicks(ds: PoohDataset, clicks: dict, obj: ObjectModel) -> list[Observation]:
+def observations_from_clicks(ds: OshdDataset, clicks: dict, obj: ObjectModel) -> list[Observation]:
     obs = []
     rig_body, camera = clicks["rig_body"], clicks["camera"]
     for c in clicks["frames"]:
@@ -335,7 +335,7 @@ def _T_to_yaml(T: np.ndarray) -> dict:
             "rotation_xyzw": [round(float(x), 6) for x in rotmat_to_quat(T[:3, :3])]}
 
 
-def write_outputs(ds: PoohDataset, res: CalibrationResult, camera: str, obj: ObjectModel,
+def write_outputs(ds: OshdDataset, res: CalibrationResult, camera: str, obj: ObjectModel,
                   rig_body: str, out_dir: Path, also: list[str] = (), refine_model: bool = True) -> list[Path]:
     """Write ``calibration/rig.yaml`` and ``models/objects.yaml`` under ``out_dir``, laid out
     like the Hub repo (so the folder can be uploaded as-is). Existing entries are kept."""
@@ -351,7 +351,7 @@ def write_outputs(ds: PoohDataset, res: CalibrationResult, camera: str, obj: Obj
     cams = ext.setdefault("cameras", {})
     for cam in [camera, *also]:
         cams[cam] = {"T_body_cam": _T_to_yaml(res.T_body_cam),
-                     "source": f"pooh calibrate {today}: {res.n_clicks} clicks in {res.n_frames} "
+                     "source": f"oshd calibrate {today}: {res.n_clicks} clicks in {res.n_frames} "
                                f"{camera} frames, RMS {res.rms_px:.2f} px"
                                + ("" if cam == camera else f" (copied from {camera})")}
     rig_path.parent.mkdir(parents=True, exist_ok=True)
@@ -370,7 +370,7 @@ def write_outputs(ds: PoohDataset, res: CalibrationResult, camera: str, obj: Obj
             "# Object models for mask / 6D-pose ground truth.\n"
             "# T_body_model maps CAD (model) coords into the OptiTrack rigid body's frame:\n"
             "#   p_body = R(rotation_xyzw) @ p_model + translation      (metres)\n"
-            f"# {obj.name}.T_body_model refined by `pooh calibrate` on {today} from {res.n_clicks} "
+            f"# {obj.name}.T_body_model refined by `oshd calibrate` on {today} from {res.n_clicks} "
             f"clicked keypoints in {res.n_frames} {camera} frames (RMS {res.rms_px:.2f} px);\n"
             f"#   correction vs. the previous estimate: yaw {res.yaw_correction_deg:+.1f} deg, "
             f"translation {np.round(res.translation_correction_m * 1000, 1).tolist()} mm.\n"
@@ -381,7 +381,7 @@ def write_outputs(ds: PoohDataset, res: CalibrationResult, camera: str, obj: Obj
     return written
 
 
-def write_object_transform(ds: PoohDataset, obj_name: str, T_body_model: np.ndarray, out_dir: Path,
+def write_object_transform(ds: OshdDataset, obj_name: str, T_body_model: np.ndarray, out_dir: Path,
                            note: str, extra: dict | None = None) -> Path:
     """Update one object's ``T_body_model`` in ``<out_dir>/models/objects.yaml``."""
     obj_path = Path(out_dir) / "models" / "objects.yaml"

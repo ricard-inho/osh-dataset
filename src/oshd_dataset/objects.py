@@ -45,9 +45,9 @@ class ObjectModel:
     #: trajectories the object was physically present in (None = all)
     trajectories: list[str] | None = None
     #: (K, 3) model-frame points a person can click in images (e.g. cube corners); used by
-    #: `pooh calibrate`. Defaults to the corners of the mesh's bounding box.
+    #: `oshd calibrate`. Defaults to the corners of the mesh's bounding box.
     keypoints: np.ndarray | None = None
-    #: Motive rigid-body export T_body_model was measured from (``pooh align-markers``), if any
+    #: Motive rigid-body export T_body_model was measured from (``oshd align-markers``), if any
     motive_file: str | None = None
     #: trajectory -> T_world_body of a mockup that stood still, used where its mocap track is
     #: missing (``models/real/mockups.json``)
@@ -79,7 +79,7 @@ class ObjectModel:
         try:
             import trimesh
         except ImportError as e:  # pragma: no cover
-            raise ImportError("Loading CAD meshes needs `pip install pooh-dataset[mesh]`") from e
+            raise ImportError("Loading CAD meshes needs `pip install oshd-dataset[mesh]`") from e
         mesh = trimesh.load(path, force="mesh", process=False)
         return cls(name=name, vertices=np.asarray(mesh.vertices, float) * scale,
                    faces=np.asarray(mesh.faces, np.int64), mesh_path=Path(path), **kw)

@@ -96,7 +96,7 @@ class Trajectory:
         if not files:
             raise FileNotFoundError(
                 f"[{self.name}] no local data for {modality!r} under {self.folder(modality)}. "
-                f"Download it with `pooh download --trajectory {self.name} --modality {modality}`."
+                f"Download it with `oshd download --trajectory {self.name} --modality {modality}`."
             )
         return files
 
@@ -325,13 +325,13 @@ class Trajectory:
         return None if t is None else self.root / "models" / "sim" / t["model"] / "model.obj"
 
     def target_mesh(self, scaled: bool = True):
-        """The target's CAD as a ``trimesh.Trimesh`` (needs ``pooh-dataset[mesh]``), in the
+        """The target's CAD as a ``trimesh.Trimesh`` (needs ``oshd-dataset[mesh]``), in the
         ``target`` body frame, scaled to this trajectory unless ``scaled=False``."""
         import trimesh
 
         path = self.target_model_path
         if path is None or not path.exists():
-            raise FileNotFoundError(f"{self.name}: no target CAD; download it with pooh download (sim data)")
+            raise FileNotFoundError(f"{self.name}: no target CAD; download it with oshd download (sim data)")
         mesh = trimesh.load(path, force="mesh", process=False)
         if scaled:
             mesh.apply_scale(float(self.target["scale"]))

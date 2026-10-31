@@ -1,7 +1,7 @@
 import numpy as np
 
-from pooh_dataset.calibration import CameraIntrinsics
-from pooh_dataset.geometry import (
+from oshd_dataset.calibration import CameraIntrinsics
+from oshd_dataset.geometry import (
     interpolate_poses,
     invert_pose,
     make_pose,
@@ -11,7 +11,7 @@ from pooh_dataset.geometry import (
     rotmat_to_quat,
     slerp,
 )
-from pooh_dataset.imaging import CameraView
+from oshd_dataset.imaging import CameraView
 
 
 def test_quat_roundtrip():

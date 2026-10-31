@@ -8,7 +8,7 @@ The source of truth is ``splits.json`` at the dataset root::
      "test":  ["trajectory_014", "trajectory_hera_000007", ...],
      "summary": {"real/antena": {"train": 24, "test": 6}, "sim_3d/approach": {"train": 400, "test": 100}, ...}}
 
-The real part is written by :func:`update_real_splits` (``pooh splits update``): the real
+The real part is written by :func:`update_real_splits` (``oshd splits update``): the real
 trajectories with a target model (a mockup of ``models/real/mockups.json`` or an object of
 ``models/objects.yaml``) are grouped by lighting *setting* (target, light colour temperature
 and intensity), and whole settings go to ``test`` so that no test lighting is seen in
@@ -19,7 +19,7 @@ Before version 3, real trajectories that ``splits.json`` did not list were assig
 hash of their name; :func:`load_splits` still does that for such files. Simulated
 trajectories it does not list are in no split until :func:`update_sim_splits` adds them.
 
-The simulated part is written by :func:`update_sim_splits` (``pooh splits update``, also run
+The simulated part is written by :func:`update_sim_splits` (``oshd splits update``, also run
 by the sim publisher): append-only, so a trajectory never changes split. Its unit is the
 recording *run* (one simulator process, a few episodes of the same scenario with the same
 seed): all episodes of a run share a split, so no near-duplicate of an eval episode is
@@ -118,7 +118,7 @@ def load_splits(root: Path, trajectories: list[str], unlisted: Iterable[str] = (
 
 RULE = ("simulated: per recording run, the eval fraction of the runs of each scenario config in test; real: per "
         "lighting setting (target, colour temperature, intensity), the eval fraction of each target's trajectories "
-        "in test; real trajectories without a target model are in no split. Append-only (pooh_dataset.splits)")
+        "in test; real trajectories without a target model are in no split. Append-only (oshd_dataset.splits)")
 
 
 def light_setting(light: dict | None) -> tuple:

@@ -4,7 +4,7 @@
  "revision": "df3530bfbd77572522fcea4699e793e4d7282bec",
  "models_revision": "df3530bfbd77572522fcea4699e793e4d7282bec",
  "frozen": "2026-10-31",
- "description": "Frozen benchmark of pooh-dataset 1.0.0: the trajectories and train / test split of Hub revision df3530b (6413 simulated + 92 real trajectories). Simulated: per recording run, ~20% of the runs of each scenario config in test (configs with few runs can be train only). Real: the trajectories with a target model (CubeSat 007-009, mockups antena 010-039 and antena_1_solar 040-098), per lighting setting (target, light colour temperature, intensity): whole settings in test, ~20% of each target's trajectories; 007-009 keep their benchmark_v1 split. Target CAD (models/sim/, models/real/, models/objects.yaml) and calibration are at the same revision. Never changes; later data goes into new benchmark versions.",
+ "description": "Frozen benchmark of oshd-dataset 1.0.0: the trajectories and train / test split of Hub revision df3530b (6413 simulated + 92 real trajectories). Simulated: per recording run, ~20% of the runs of each scenario config in test (configs with few runs can be train only). Real: the trajectories with a target model (CubeSat 007-009, mockups antena 010-039 and antena_1_solar 040-098), per lighting setting (target, light colour temperature, intensity): whole settings in test, ~20% of each target's trajectories; 007-009 keep their benchmark_v1 split. Target CAD (models/sim/, models/real/, models/objects.yaml) and calibration are at the same revision. Never changes; later data goes into new benchmark versions.",
  "train": [
   "trajectory_007",
   "trajectory_008",

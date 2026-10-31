@@ -1,4 +1,4 @@
-"""``pooh`` command-line interface."""
+"""``oshd`` command-line interface."""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ from .splits import BENCHMARKS, EVAL_FRACTION
 
 
 def _dataset(args):
-    from .dataset import PoohDataset
+    from .dataset import OshdDataset
 
-    return PoohDataset(args.root, args.repo)
+    return OshdDataset(args.root, args.repo)
 
 
 def cmd_download(args) -> None:
@@ -237,7 +237,7 @@ def cmd_calibrate(args) -> None:
               "mesh's bounding box. Pass --box-keypoints if that includes more than the clickable body.")
     if args.fixed_model and args.refine_model:
         raise SystemExit("error: --fixed-model and --refine-model are mutually exclusive")
-    # A T_body_model measured with `pooh align-markers` is more reliable than one solved from
+    # A T_body_model measured with `oshd align-markers` is more reliable than one solved from
     # clicks (which trades off against the camera position): keep it unless asked otherwise.
     args.fixed_model = args.fixed_model or (obj.motive_file is not None and not args.refine_model)
     if args.fixed_model and not args.refine_model and obj.motive_file:
@@ -265,7 +265,7 @@ def cmd_calibrate(args) -> None:
                                  f"({len(done)} frames); nothing left to add")
             raise FileNotFoundError(
                 f"no frames with {args.camera} + mocap ({rig_body}, {obj.mocap_body}) for {obj.name}; "
-                f"download them: pooh download -m {args.camera} -m mocap")
+                f"download them: oshd download -m {args.camera} -m mocap")
 
         def frames():
             for traj, idx, t in cands:
@@ -306,7 +306,7 @@ def cmd_calibrate(args) -> None:
     obs = cal.observations_from_clicks(ds, clicks, obj)
     if len(obs) < 2:
         raise SystemExit(f"error: need clicked corners in at least 2 frames with valid mocap "
-                         f"(have {len(obs)}); run `pooh calibrate ... --add` to click more")
+                         f"(have {len(obs)}); run `oshd calibrate ... --add` to click more")
     print(f"solving from {sum(len(o.points) for o in obs)} clicks in {len(obs)} frames ...")
     res = cal.solve(obs, obj, refine_model=not args.fixed_model, refine_tilt=args.refine_tilt)
     print(f"RMS reprojection error: {res.rms_px:.2f} px")
@@ -356,7 +356,7 @@ def cmd_calibrate(args) -> None:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(p, dst)
         print(f"applied to the local dataset at {ds.root} (originals kept as *.orig)")
-    print("\nshare it with everyone (the local copy is overwritten by `pooh download` until uploaded):")
+    print("\nshare it with everyone (the local copy is overwritten by `oshd download` until uploaded):")
     print(f"  hf upload {ds.repo_id} {out} . --repo-type dataset --exclude 'overlays_*/*'")
 
 
@@ -410,10 +410,10 @@ VIZ_MODALITIES = ["mocap", "robot_messages", "imu", "lidar", "realsense_color", 
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="pooh", description="Download and process the POOH multimodal robotics dataset.")
+    p = argparse.ArgumentParser(prog="oshd", description="Download and process the OSHD multimodal robotics dataset.")
     p.add_argument("--repo", default=DEFAULT_REPO_ID, help="Hub dataset repo id (default: %(default)s)")
     p.add_argument("--root", type=Path, default=None,
-                   help=f"local dataset folder (default: {default_root()}, or $POOH_DATA_DIR)")
+                   help=f"local dataset folder (default: {default_root()}, or $OSHD_DATA_DIR)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     d = sub.add_parser("download", help="download (part of) the dataset; resumes / updates")
@@ -504,7 +504,7 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("-t", "--trajectory", action="append", help="repeatable; default all local")
     c.add_argument("--frames", type=int, default=10,
                    help="frames to click (default %(default)s); with --add: how many more")
-    c.add_argument("--out", type=Path, default=Path("pooh_calibration"),
+    c.add_argument("--out", type=Path, default=Path("oshd_calibration"),
                    help="output folder, laid out like the Hub repo (default %(default)s)")
     c.add_argument("--clicks", type=Path, help="clicks file (default <out>/calibration/clicks_<camera>.json)")
     c.add_argument("--add", action="store_true", help="click more frames on top of an existing clicks file")
@@ -540,7 +540,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--motive-to-body", default="x,-z,y",
                    help="ROS body axes in terms of Motive's Y-up body axes (default %(default)s)")
     a.add_argument("--max-residual-mm", type=float, default=3.0)
-    a.add_argument("--out", type=Path, default=Path("pooh_calibration"))
+    a.add_argument("--out", type=Path, default=Path("oshd_calibration"))
     a.add_argument("--no-apply", action="store_true")
     a.set_defaults(fn=cmd_align_markers)
 

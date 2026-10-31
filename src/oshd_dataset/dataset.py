@@ -20,19 +20,19 @@ from .objects import ObjectModel, load_object_models
 from .splits import load_benchmark, load_splits, sim_run
 from .trajectory import Trajectory
 
-__all__ = ["PoohDataset"]
+__all__ = ["OshdDataset"]
 
 NOT_TRAJECTORY_DIRS = {"calibration", "metadata", "models"}
 
 
-class PoohDataset:
+class OshdDataset:
     """A local dataset folder with the Hub layout: ``<modality>/<trajectory>/*.parquet`` for
     real recordings, ``<sim group>_<modality>/<trajectory>/*.parquet`` for simulated ones.
 
-    >>> ds = PoohDataset.download(modalities=["mocap", "realsense_color", "realsense_depth"])
+    >>> ds = OshdDataset.download(modalities=["mocap", "realsense_color", "realsense_depth"])
     >>> traj = ds["trajectory_007"]
     >>> rgb = traj.frame("realsense_color", 0)
-    >>> sim = PoohDataset.download(domain="sim_3d", modalities=["rgb", "mocap"])
+    >>> sim = OshdDataset.download(domain="sim_3d", modalities=["rgb", "mocap"])
     >>> sim.split("all", domain="synthetic")
     """
 
@@ -47,7 +47,7 @@ class PoohDataset:
         self.root = Path(root) if root is not None else default_root(repo_id)
         if not self.root.exists():
             raise FileNotFoundError(
-                f"{self.root} does not exist; call PoohDataset.download(...) or `pooh download`"
+                f"{self.root} does not exist; call OshdDataset.download(...) or `oshd download`"
             )
         self._trajectories: dict[str, Trajectory] = {}
 
@@ -63,14 +63,14 @@ class PoohDataset:
         split: str | None = None,
         task: str | None = None,
         benchmark: str | None = None,
-    ) -> PoohDataset:
+    ) -> OshdDataset:
         root = download(repo_id, root, trajectories, modalities, revision, domain=domain, split=split, task=task,
                         benchmark=benchmark)
         return cls(root, repo_id, benchmark=benchmark)
 
     def __repr__(self) -> str:
         bench = f", benchmark={self.benchmark!r}" if self.benchmark else ""
-        return f"PoohDataset({str(self.root)!r}, trajectories={len(self.trajectory_names)}{bench})"
+        return f"OshdDataset({str(self.root)!r}, trajectories={len(self.trajectory_names)}{bench})"
 
     @cached_property
     def manifest(self) -> dict:
@@ -149,12 +149,12 @@ class PoohDataset:
 
     @cached_property
     def splits(self) -> dict[str, list[str]]:
-        """Split name -> trajectories, from ``splits.json`` (see :mod:`pooh_dataset.splits`)."""
+        """Split name -> trajectories, from ``splits.json`` (see :mod:`oshd_dataset.splits`)."""
         real = [t for t in self.trajectory_names if self.trajectory_info(t)["domain"] == "real"]
         return load_splits(self.root, self.trajectory_names, unlisted=real)
 
     def in_domain(self, name: str, domain: str | None) -> bool:
-        """Whether trajectory ``name`` belongs to ``domain`` (see :data:`pooh_dataset.hub.DOMAINS`)."""
+        """Whether trajectory ``name`` belongs to ``domain`` (see :data:`oshd_dataset.hub.DOMAINS`)."""
         if domain is None:
             return True
         real, groups = domain_parts(domain)

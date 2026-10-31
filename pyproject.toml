@@ -3,9 +3,9 @@ requires = ["hatchling>=1.21"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pooh-dataset"
+name = "oshd-dataset"
 dynamic = ["version"]
-description = "Download, synchronize and turn the POOH multimodal robotics dataset (events, RGB-D, lidar, mocap) into pose-estimation, detection, segmentation and optical-flow training data."
+description = "Download, synchronize and turn the OSHD multimodal robotics dataset (events, RGB-D, lidar, mocap) into pose-estimation, detection, segmentation and optical-flow training data."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -33,36 +33,36 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# PyTorch Dataset wrappers (pooh_dataset.torch)
+# PyTorch Dataset wrappers (oshd_dataset.torch)
 torch = ["torch>=2.0"]
 # Loading CAD meshes (.ply/.obj/.stl) for mask / box rendering
 mesh = ["trimesh>=4.0"]
-# Synchronized playback dashboard (pooh viz). Rerun's API moves fast: tested with 0.38.
+# Synchronized playback dashboard (oshd viz). Rerun's API moves fast: tested with 0.38.
 viz = ["rerun-sdk>=0.38"]
-# pooh calibrate / align-markers (the click page itself needs nothing extra)
+# oshd calibrate / align-markers (the click page itself needs nothing extra)
 calib = ["trimesh>=4.0"]
-all = ["pooh-dataset[torch,mesh,viz,calib]"]
+all = ["oshd-dataset[torch,mesh,viz,calib]"]
 
 [project.urls]
-Homepage = "https://github.com/ricard-inho/pooh-dataset"
-Issues = "https://github.com/ricard-inho/pooh-dataset/issues"
-Documentation = "https://github.com/ricard-inho/pooh-dataset#readme"
+Homepage = "https://github.com/ricard-inho/oshd-dataset"
+Issues = "https://github.com/ricard-inho/oshd-dataset/issues"
+Documentation = "https://github.com/ricard-inho/oshd-dataset#readme"
 Dataset = "https://huggingface.co/datasets/r3m3c3/off_test"
 
 [project.scripts]
-pooh = "pooh_dataset.cli:main"
+oshd = "oshd_dataset.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.5", "trimesh>=4.0", "rerun-sdk>=0.38"]
 
 [tool.hatch.version]
-path = "src/pooh_dataset/__init__.py"
+path = "src/oshd_dataset/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pooh_dataset"]
+packages = ["src/oshd_dataset"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/pooh_dataset", "tests", "README.md", "DATA_REQUIREMENTS.md", "LICENSE"]
+include = ["src/oshd_dataset", "tests", "README.md", "DATA_REQUIREMENTS.md", "LICENSE"]
 
 [tool.ruff]
 line-length = 100

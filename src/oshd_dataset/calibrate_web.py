@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import numpy as np
 from PIL import Image
 
-PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>pooh calibrate</title>
+PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>oshd calibrate</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
  html,body{margin:0;height:100%;background:#111;color:#ddd;font:14px system-ui,sans-serif}
@@ -67,7 +67,7 @@ async function call(path, body) {
   try {
     const r = await fetch(path, body === undefined ? {} : {method: 'POST', body: JSON.stringify(body)});
     show(await r.json());
-  } catch (e) { msg('connection lost — is `pooh calibrate` still running?'); }
+  } catch (e) { msg('connection lost — is `oshd calibrate` still running?'); }
   busy = false;
 }
 function show(s) {

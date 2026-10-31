@@ -1,7 +1,7 @@
 """Framework-agnostic task datasets. Each item is a dict of numpy arrays; wrap with
-:mod:`pooh_dataset.torch` for PyTorch or iterate directly.
+:mod:`oshd_dataset.torch` for PyTorch or iterate directly.
 
-All tasks split by trajectory (see :mod:`pooh_dataset.splits`).
+All tasks split by trajectory (see :mod:`oshd_dataset.splits`).
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .dataset import PoohDataset
+from .dataset import OshdDataset
 from .events import voxel_grid
 from .flow import optical_flow
 from .geometry import invert_pose, transform_points
@@ -42,7 +42,7 @@ class _FrameTask:
 
     def __init__(
         self,
-        dataset: PoohDataset,
+        dataset: OshdDataset,
         split: str | list[str] = "train",
         camera: str = "firefly",
         objects: list[str] | None = None,
@@ -234,7 +234,7 @@ class OpticalFlow(_FrameTask):
 
     needs_objects = False
 
-    def __init__(self, dataset: PoohDataset, split="train", camera: str = "realsense_color",
+    def __init__(self, dataset: OshdDataset, split="train", camera: str = "realsense_color",
                  objects: list[str] | None = None, frame_gap: int = 1,
                  window_ns: int = 50_000_000, event_bins: int = 5, **kw):
         if camera == "events" and (kw.get("undistort") or kw.get("image_size")):

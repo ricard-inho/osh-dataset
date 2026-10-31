@@ -197,11 +197,11 @@ def build_sim(root, traj=SIM_TRAJ, group="sim_3d"):
 
 @pytest.fixture(scope="session")
 def fake_root(tmp_path_factory):
-    return build(tmp_path_factory.mktemp("pooh"))
+    return build(tmp_path_factory.mktemp("oshd"))
 
 
 @pytest.fixture()
 def ds(fake_root):
-    from pooh_dataset import PoohDataset
+    from oshd_dataset import OshdDataset
 
-    return PoohDataset(fake_root, repo_id="test/fake")
+    return OshdDataset(fake_root, repo_id="test/fake")

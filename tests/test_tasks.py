@@ -3,9 +3,9 @@ import json
 import numpy as np
 from conftest import FRAME_DT, N_FRAMES, SPEED, H, W
 
-from pooh_dataset.cli import main
-from pooh_dataset.export import export_bop, export_coco, export_yolo, extract_frames
-from pooh_dataset.tasks import ObjectDetection, OpticalFlow, PoseEstimation, Segmentation
+from oshd_dataset.cli import main
+from oshd_dataset.export import export_bop, export_coco, export_yolo, extract_frames
+from oshd_dataset.tasks import ObjectDetection, OpticalFlow, PoseEstimation, Segmentation
 
 
 def test_pose_task(ds):

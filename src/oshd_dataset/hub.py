@@ -32,7 +32,7 @@ __all__ = [
     "remote_sim_manifest",
 ]
 
-DEFAULT_REPO_ID = os.environ.get("POOH_REPO_ID", "r3m3c3/off_test")
+DEFAULT_REPO_ID = os.environ.get("OSHD_REPO_ID", "r3m3c3/off_test")
 
 REAL_MODALITIES = ("events", "firefly", "realsense_color", "realsense_depth", "lidar", "imu", "mocap",
                    "robot_messages")
@@ -52,9 +52,9 @@ SIM_TARGETS = "models/sim/targets.json"
 
 
 def default_root(repo_id: str = DEFAULT_REPO_ID) -> Path:
-    """``$POOH_DATA_DIR/<repo>`` or ``~/.cache/pooh_dataset/<repo>``."""
-    base = os.environ.get("POOH_DATA_DIR")
-    base_path = Path(base) if base else Path.home() / ".cache" / "pooh_dataset"
+    """``$OSHD_DATA_DIR/<repo>`` or ``~/.cache/oshd_dataset/<repo>``."""
+    base = os.environ.get("OSHD_DATA_DIR")
+    base_path = Path(base) if base else Path.home() / ".cache" / "oshd_dataset"
     return base_path / repo_id.replace("/", "--")
 
 
@@ -141,11 +141,11 @@ def download(
         revision = b["revision"]
     if trajs is None and (split is not None or task is not None or benchmark is not None):
         # Pick the trajectories from the manifests and splits.json, then fetch them by name.
-        from .dataset import PoohDataset
+        from .dataset import OshdDataset
 
         snapshot_download(repo_id, repo_type="dataset", revision=revision, local_dir=root,
                           allow_patterns=META_PATTERNS, ignore_patterns=META_IGNORE, max_workers=max_workers)
-        trajs = PoohDataset(root, repo_id).split(split or "all", domain, task=task, benchmark=benchmark)
+        trajs = OshdDataset(root, repo_id).split(split or "all", domain, task=task, benchmark=benchmark)
         if not trajs:
             raise ValueError(f"no trajectory with domain={domain!r} split={split!r} task={task!r} "
                              f"benchmark={benchmark!r}")

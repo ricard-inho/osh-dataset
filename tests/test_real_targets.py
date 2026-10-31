@@ -8,11 +8,11 @@ import pytest
 import yaml
 from conftest import T0
 
-from pooh_dataset.calibration import Calibration
-from pooh_dataset.geometry import make_pose
-from pooh_dataset.labels import object_pose
-from pooh_dataset.objects import MOCKUP_BODY, ObjectModel, load_object_models
-from pooh_dataset.splits import load_benchmark, load_splits, real_targets, update_real_splits
+from oshd_dataset.calibration import Calibration
+from oshd_dataset.geometry import make_pose
+from oshd_dataset.labels import object_pose
+from oshd_dataset.objects import MOCKUP_BODY, ObjectModel, load_object_models
+from oshd_dataset.splits import load_benchmark, load_splits, real_targets, update_real_splits
 
 INTR = {"width": 64, "height": 48, "K": [50.0, 0, 32, 0, 50.0, 24, 0, 0, 1], "D": [0.0] * 5}
 

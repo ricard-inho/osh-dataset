@@ -1,9 +1,9 @@
-"""PyTorch adapters (``pip install pooh-dataset[torch]``).
+"""PyTorch adapters (``pip install oshd-dataset[torch]``).
 
->>> from pooh_dataset import PoohDataset
->>> from pooh_dataset.tasks import ObjectDetection
->>> from pooh_dataset.torch import TorchDataset, detection_collate
->>> ds = TorchDataset(ObjectDetection(PoohDataset(), "train", camera="realsense_color"))
+>>> from oshd_dataset import OshdDataset
+>>> from oshd_dataset.tasks import ObjectDetection
+>>> from oshd_dataset.torch import TorchDataset, detection_collate
+>>> ds = TorchDataset(ObjectDetection(OshdDataset(), "train", camera="realsense_color"))
 >>> loader = torch.utils.data.DataLoader(ds, batch_size=8, collate_fn=detection_collate)
 """
 
@@ -17,7 +17,7 @@ try:
     import torch
     from torch.utils.data import Dataset
 except ImportError as e:  # pragma: no cover
-    raise ImportError("pooh_dataset.torch needs PyTorch: `pip install pooh-dataset[torch]`") from e
+    raise ImportError("oshd_dataset.torch needs PyTorch: `pip install oshd-dataset[torch]`") from e
 
 __all__ = ["TorchDataset", "to_tensor_sample", "detection_collate"]
 
@@ -44,7 +44,7 @@ def to_tensor_sample(sample: dict[str, Any], channels_first: bool = True) -> dic
 
 
 class TorchDataset(Dataset):
-    """Wrap any :mod:`pooh_dataset.tasks` dataset. ``transform`` gets the tensor dict."""
+    """Wrap any :mod:`oshd_dataset.tasks` dataset. ``transform`` gets the tensor dict."""
 
     def __init__(self, task, transform=None, channels_first: bool = True):
         self.task = task
