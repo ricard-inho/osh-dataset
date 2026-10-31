@@ -241,8 +241,9 @@ exposed as `ds.hub_splits`, not used for training.
 
 Frozen benchmarks for papers (`benchmark_v1`: Hub revision `8205a11`, 2195 sim + 3 real
 trajectories, train 1762 / test 436) ship with the package (`pooh_dataset/benchmarks/`). They
-are copied unchanged into `splits.json` and fix the split of their simulated trajectories. A
-new benchmark is a new file (`v2.json`), never an edit.
+are copied unchanged into `splits.json` and fix the split of their trajectories. A
+new benchmark is a new file, never an edit. `benchmark_v2` (pooh-dataset 1.0.0: Hub revision
+`df3530b`, 6413 sim + 92 real trajectories, train 5474 / test 1031) is the final collection.
 
 ## 10. Trajectory metadata — `manifest.json`
 

@@ -71,9 +71,9 @@ def cmd_splits(args) -> None:
         for cell, n in new["summary"].items():
             print(f"  {cell:<22} train {n['train']:>6}  test {n['test']:>5}")
         print(f"written {root / 'splits.json'}")
-        if args.push and added:
+        if args.push and (added or new != current):  # new trajectories or a new frozen benchmark copy
             HfApi().upload_file(path_or_fileobj=root / "splits.json", path_in_repo="splits.json", repo_id=args.repo,
-                                repo_type="dataset", commit_message=f"splits.json: +{added} trajectories")
+                                repo_type="dataset", commit_message=f"splits.json: +{added} trajectories, benchmarks {', '.join(BENCHMARKS)}")
             print(f"pushed to {args.repo}")
         elif args.push:
             print("nothing new: not pushed")

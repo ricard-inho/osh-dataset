@@ -89,11 +89,12 @@ def light(temp, intensity):
 
 
 def real_fixture():
-    """antena: 10 settings x 3 trajectories (010..039); cubesat 007-009 without light."""
+    """antena: 10 settings x 3 trajectories (names in no frozen benchmark); cubesat 007-009
+    (benchmark_v1) without light."""
     targets, lights, n = {}, {}, 10
     for k in range(10):
         for _ in range(3):
-            t = f"trajectory_{n:03d}"
+            t = f"trajectory_fixture_{n:03d}"
             targets[t], lights[t] = "antena", light(3000 + 300 * k, 20 + k)
             n += 1
     targets.update({f"trajectory_00{i}": "cubesat" for i in (7, 8, 9)})
@@ -121,7 +122,7 @@ def test_real_splits_hold_out_whole_lighting_settings():
 
 def test_real_splits_append_only_and_v3_has_no_hash_fallback(tmp_path):
     targets, lights = real_fixture()
-    first = {t: v for t, v in targets.items() if t < "trajectory_025"}
+    first = {t: v for t, v in targets.items() if t < "trajectory_fixture_025"}
     s1 = update_real_splits(None, first, lights)
     s2 = update_real_splits(s1, targets, lights)
     for k in ("train", "test"):

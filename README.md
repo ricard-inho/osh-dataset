@@ -336,20 +336,26 @@ one Hub revision with a fixed train / test split. It ships with the package
 | benchmark | Hub revision | trajectories | train / test |
 |---|---|---|---|
 | `v1` (`benchmark_v1`, frozen 2026-10-20) | `8205a11` | 2195 sim + 3 real | sim_3d/approach 378 / 93, sim_3d/orbit 800 / 201, sim_zerog/docking 300 / 72, sim_zerog/inspection 282 / 69, real 2 / 1 |
+| **`v2`** (`benchmark_v2`, frozen 2026-10-31, pooh-dataset 1.0.0) | `df3530b` | 6413 sim + 92 real | sim_3d/approach 1089 / 186, sim_3d/orbit 2528 / 522, sim_zerog/docking 921 / 162, sim_zerog/inspection 861 / 144, real/antena 24 / 6, real/antena_1_solar 49 / 10, real/cubesat 2 / 1 |
+
+`v2` is the final data collection: every simulated campaign and every real recording with a
+target model (the CubeSat and both mockups, with their CAD, rig calibration and real lighting
+-setting split). It contains `v1`, and every `v1` trajectory keeps its split.
 
 ```bash
-pooh download --benchmark v1 --domain sim_zerog --task docking --split test -m rgb -m depth -m mocap
-pooh splits --benchmark v1
+pooh download --benchmark v2 --domain sim_zerog --task docking --split test -m rgb -m depth -m mocap
+pooh download --benchmark v2 --domain real --split test -m realsense_color -m realsense_depth -m mocap
+pooh splits --benchmark v2
 ```
 
 ```python
-ds = PoohDataset.download(benchmark="v1", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
-ds.split("test", domain="sim_zerog", task="docking", benchmark="v1")
+ds = PoohDataset.download(benchmark="v2", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
+ds.split("test", domain="sim_zerog", task="docking", benchmark="v2")
 ```
 
 `--benchmark` pins the download to the benchmark's revision, so later uploads and repairs never
-change its data. The target CAD was uploaded after the freeze, so it comes from the benchmark's
-`models_revision` (`22a8431`). Its simulated trajectories keep their split in the growing `splits.json` too.
+change its data. For `v1` the target CAD was uploaded after the freeze, so it comes from its
+`models_revision` (`22a8431`); `v2` has everything at its own revision. Its simulated trajectories keep their split in the growing `splits.json` too.
 Cite the benchmark name and revision in the paper. `ds.hub_splits` gives the splits shown by the Hub viewer (simulation scenarios and
 groups of real trajectories); they organise the data and are not train / test splits.
 

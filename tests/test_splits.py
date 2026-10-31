@@ -104,6 +104,17 @@ def test_benchmark_v1_frozen():
     assert update_sim_splits(None, manifest(16))["benchmark_v1"] == b
 
 
+def test_benchmark_v2_frozen_and_extends_v1():
+    b, v1 = load_benchmark("v2"), load_benchmark("v1")
+    assert b["name"] == "benchmark_v2" and b["revision"] == "df3530bfbd77572522fcea4699e793e4d7282bec"
+    assert len(b["train"]) == 5474 and len(b["test"]) == 1031 and not b["val"]
+    assert not set(b["train"]) & set(b["test"])
+    for k in ("train", "test"):  # every v1 trajectory keeps its split
+        assert set(v1[k]) <= set(b[k])
+    assert b["summary"]["real/antena"] == {"train": 24, "val": 0, "test": 6}
+    assert update_sim_splits(None, manifest(16))["benchmark_v2"] == b
+
+
 def test_benchmark_split_and_download_pin(ds, monkeypatch):
     from pooh_dataset import hub
 
