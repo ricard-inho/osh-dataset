@@ -57,8 +57,21 @@ def camera_pose(traj: Trajectory, camera: str, t_ns, max_gap_ns: int = 50_000_00
 
 
 def object_pose(traj: Trajectory, obj: ObjectModel, t_ns, max_gap_ns: int = 50_000_000):
-    """T_world_model at ``t_ns``."""
-    T_world_body, valid = traj.body_pose(obj.mocap_body, t_ns, max_gap_ns)
+    """T_world_model at ``t_ns``. Where the object's mocap track has no sample within
+    ``max_gap_ns`` (or the body was not tracked at all), its static pose in this trajectory is
+    used if it has one (a mockup that stood still, see :class:`ObjectModel`)."""
+    static = obj.static_poses.get(traj.name)
+    if traj.has("mocap") and obj.mocap_body in traj.mocap_bodies:
+        T_world_body, valid = traj.body_pose(obj.mocap_body, t_ns, max_gap_ns)
+        if static is not None:
+            T_world_body = np.where(np.asarray(valid)[..., None, None], T_world_body, static)
+            valid = np.ones_like(valid, bool) if np.ndim(valid) else True
+    elif static is not None:
+        n = np.shape(t_ns)
+        T_world_body = np.broadcast_to(static, n + (4, 4)).copy()
+        valid = np.ones(n, bool) if n else True
+    else:
+        traj.mocap(obj.mocap_body)  # raises: not tracked
     return T_world_body @ obj.T_body_model, valid
 
 

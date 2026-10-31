@@ -40,15 +40,16 @@ Conventions used everywhere:
 
 | # | Item | File | Needed for | Status |
 |---|------|------|------------|--------|
-| 1 | Camera extrinsics: `SensorStack` body → each camera optical frame | `calibration/rig.yaml` | labels in that camera | **realsense_color done** (`pooh calibrate`, 8.8 px RMS); firefly, realsense_depth, events missing |
-| 2 | Event camera intrinsics (1280x720) | `calibration/rig.yaml` or `<traj>.yaml` | event labels / flow | missing |
-| 3 | Firefly intrinsics from a real calibration (current ones are `supplement:`) | `calibration/rig.yaml` | Firefly labels | verify |
+| 1 | Camera extrinsics: `SensorStack` body → each camera optical frame | `calibration/rig.yaml` + `<traj>.yaml` | labels in that camera | **realsense_color done** (`pooh calibrate`, 8.8 px RMS); firefly + events from the rig calibration (`T_realsense_color_cam`, trajectory_010 on); realsense_depth missing |
+| 2 | Event camera intrinsics (1280x720) | `calibration/<traj>.yaml` | event labels / flow | **done** from trajectory_010 (rig calibration accepted 2026-10-16) |
+| 3 | Firefly intrinsics from a real calibration | `calibration/<traj>.yaml` | Firefly labels | **done** from trajectory_010; 001-009 use the older `supplement:` ones |
 | 4 | Cubesat CAD mesh | `models/CubeSat_U1.obj` | masks, boxes, BOP | **done** |
 | 5 | Cubesat marker → CAD transform `T_body_model` | `models/objects.yaml` | all cubesat labels | **done** (`pooh align-markers`, 1.2 mm) |
 | 6 | Floating platform mesh + `T_body_model` (optional, for occlusion + a 2nd class) | `models/objects.yaml` | better masks | optional |
+| 6b | Mockup CAD (trajectory_010 on) + rigid-body → CAD transform | `models/real/<mockup>/`, `models/real/mockups.json`, `models/objects.yaml` | mockup labels | **CAD done**; `T_body_model` see below |
 | 7 | Per-sensor time offsets, if any sensor is not on the host clock | `calibration/rig.yaml` | exact sync | optional |
 | 8 | RealSense depth scale + which frame depth is aligned to | `calibration/<traj>.yaml` | flow | verify |
-| 9 | Official train / val / test split | `splits.json` | comparable results | **simulated done** (written on every sim publish); real: hash fallback |
+| 9 | Official train / val / test split | `splits.json` | comparable results | **done**: simulated per recording run, real per lighting setting |
 | 10 | Per-trajectory metadata (real / synthetic, task type) | `manifest.json` | filtering | optional |
 
 ---
@@ -95,6 +96,12 @@ under the cube, appears on top in its images). `T_body_cam` accounts for that; n
 
 If the rig is re-assembled, put a new `extrinsics:` block in that trajectory's
 `calibration/<trajectory>.yaml`: it overrides `rig.yaml` key by key.
+
+**Camera-to-camera (trajectory_010 on).** The real pipeline writes the accepted rig calibration
+(OSED `calib.sh`) into every `calibration/<trajectory>.yaml`: each calibrated camera
+(`realsense_color`, `firefly`, `events`) has `T_realsense_color_cam`, its pose in the RealSense
+colour optical frame. A camera without its own `T_body_cam` gets `T_body_cam(realsense_color) @
+T_realsense_color_cam`, so only the RealSense colour camera needs the hand-eye calibration above.
 
 ## 2. Event camera intrinsics
 
@@ -155,6 +162,16 @@ pooh align-markers --motive models/CubeSat_U1.motive --cad-axes x,-z,y \
   consistent with the lab. The marker holder is on the cube's **bottom** face: the cube sits
   on it, tilted about 23° from vertical. The cube centre is 6.8 cm above the LED centroid.
 
+**Mockups (trajectory_010 on).** The recording pipeline uploads each mockup's CAD to
+`models/real/<mockup>/model.obj` (metres, textures next to it) and writes
+`models/real/mockups.json`: trajectory -> `{model, static_pose}`. They are loaded as objects
+on the mocap body `target` (`class_id` after those of objects.yaml), present in their
+trajectories; `static_pose` (world frame) replaces the mocap where the mockup's tracking drops
+out. The CAD's origin is the pivot of the Motive rigid body, but the rigid body's axes are the
+ones Motive gave it when it was created, so its rotation relative to the CAD goes in
+`models/objects.yaml` under the mockup's name (`T_body_model`, as for the cubesat); the rest of
+the mockup entry is filled in from mockups.json.
+
 For a new object: export its rigid body from Motive, measure its marker centres in the CAD,
 and run the same command. Without a CAD, `box: [sx, sy, sz]` (metres, centred on the model
 origin) instead of `mesh` gives correct boxes and masks for a cuboid.
@@ -192,7 +209,7 @@ The offset is **added** to that sensor's timestamps everywhere in the package.
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "train": ["trajectory_hera_000001", "..."],
   "val":   [],
   "test":  ["trajectory_hera_000007", "..."],
@@ -210,8 +227,15 @@ The simulated trajectories are added by `pooh_dataset.splits.update_sim_splits`,
 publisher (`pooh_dataset_pipeline/sim/publish_hf.py`) runs on every upload; `pooh splits update
 --push` does the same by hand. It is append-only, keeps every listed trajectory (real ones
 too), puts all episodes of a recording run in one split and sends ~20% of the runs of each
-scenario config to `test`. Simulated trajectories not listed yet are in no split. Real
-trajectories not listed keep the hash fallback. The `splits` key of `manifest.json` (the real converter's `--split`) and the
+scenario config to `test`. Simulated trajectories not listed yet are in no split.
+
+The real trajectories with a target model (`models/objects.yaml` `trajectories`, or a mockup
+in `models/real/mockups.json`) are added by `update_real_splits` (`pooh splits update`), also
+append-only: grouped by lighting setting (target, light colour temperature and intensity from
+`manifest.json`'s `light`), whole settings go to `test` until ~20% of each target's
+trajectories are there, in order of colour temperature so the test settings spread over the
+range. Real trajectories without a target model are in no split. Files before version 3 still
+give unlisted real trajectories the hash fallback. The `splits` key of `manifest.json` (the real converter's `--split`) and the
 simulation scenarios are the *Hub viewer's* splits: they group the data for browsing and are
 exposed as `ds.hub_splits`, not used for training.
 

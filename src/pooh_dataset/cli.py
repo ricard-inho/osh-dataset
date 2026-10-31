@@ -29,14 +29,16 @@ def cmd_download(args) -> None:
 
 def cmd_splits(args) -> None:
     """Show the train / test split per domain and task; ``update`` adds the new simulated
-    trajectories of the Hub's sim_manifest.json to the Hub's splits.json."""
+    trajectories of the Hub's sim_manifest.json and the new real trajectories with a target
+    model (manifest.json, models/objects.yaml, models/real/mockups.json) to its splits.json."""
     import json
 
     if args.action == "update":
+        import yaml
         from huggingface_hub import HfApi, hf_hub_download
 
-        from .hub import SIM_MANIFEST, remote_sim_manifest
-        from .splits import update_sim_splits
+        from .hub import SIM_MANIFEST, remote_manifest, remote_sim_manifest
+        from .splits import real_targets, update_real_splits, update_sim_splits
 
         try:
             from huggingface_hub.errors import EntryNotFoundError
@@ -47,20 +49,31 @@ def cmd_splits(args) -> None:
                                                       force_download=True)).read_text())
         except EntryNotFoundError:  # no splits.json on the Hub yet
             current = None
+        def hub_file(path: str):
+            try:
+                return Path(hf_hub_download(args.repo, path, repo_type="dataset", force_download=True)).read_text()
+            except EntryNotFoundError:
+                return None
+
         manifest = remote_sim_manifest(args.repo)
         new = update_sim_splits(current, manifest, args.eval_fraction)
+        real = remote_manifest(args.repo)
+        targets = real_targets(yaml.safe_load(hub_file("models/objects.yaml") or "{}"),
+                               json.loads(hub_file("models/real/mockups.json") or "{}"))
+        new = update_real_splits(new, targets, real.get("light", {}), args.eval_fraction)
         before = {t for k in ("train", "val", "test") for t in (current or {}).get(k, [])}
         added = sum(t not in before for k in ("train", "val", "test") for t in new[k])
         root = args.root or default_root(args.repo)
         root.mkdir(parents=True, exist_ok=True)
         (root / "splits.json").write_text(json.dumps(new, indent=1) + "\n")
-        print(f"{added} new simulated trajectories assigned ({len(manifest.get('trajectories', {}))} in {SIM_MANIFEST})")
+        print(f"{added} new trajectories assigned ({len(manifest.get('trajectories', {}))} in {SIM_MANIFEST}, "
+              f"{len(targets)} real with a target model)")
         for cell, n in new["summary"].items():
             print(f"  {cell:<22} train {n['train']:>6}  test {n['test']:>5}")
         print(f"written {root / 'splits.json'}")
         if args.push and added:
             HfApi().upload_file(path_or_fileobj=root / "splits.json", path_in_repo="splits.json", repo_id=args.repo,
-                                repo_type="dataset", commit_message=f"splits.json: +{added} simulated trajectories")
+                                repo_type="dataset", commit_message=f"splits.json: +{added} trajectories")
             print(f"pushed to {args.repo}")
         elif args.push:
             print("nothing new: not pushed")
@@ -416,11 +429,11 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--revision", help="commit sha / tag to pin")
     d.set_defaults(fn=cmd_download)
 
-    s = sub.add_parser("splits", help="train / test split per domain and task; `update` assigns new sim runs")
+    s = sub.add_parser("splits", help="train / test split per domain and task; `update` assigns new trajectories")
     s.add_argument("action", nargs="?", choices=["show", "update"], default="show")
     s.add_argument("--benchmark", choices=BENCHMARKS, help="show: the frozen benchmark's split")
     s.add_argument("--push", action="store_true", help="update: upload the new splits.json to the Hub")
-    s.add_argument("--eval-fraction", type=float, default=EVAL_FRACTION, help="update: share of runs per scenario in test")
+    s.add_argument("--eval-fraction", type=float, default=EVAL_FRACTION, help="update: share of sim runs per scenario / real trajectories per target in test")
     s.set_defaults(fn=cmd_splits)
 
     i = sub.add_parser("info", help="list trajectories, modalities, splits")

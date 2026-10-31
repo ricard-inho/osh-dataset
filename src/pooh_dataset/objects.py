@@ -1,10 +1,16 @@
 """Tracked object models (CAD mesh or box) and the mocap-marker -> model transform.
 
-Read from ``models/objects.yaml`` in the dataset; see ``DATA_REQUIREMENTS.md``.
+Read from ``models/objects.yaml`` in the dataset and from the real mockups of
+``models/real/mockups.json`` (trajectory -> mockup, written by the real pipeline): each mockup
+is ``models/real/<mockup>/model.obj`` in the frame of the mocap body ``target`` (metres), with a
+``static_pose`` for trajectories where the mockup stood still and its tracking dropped out.
+See ``DATA_REQUIREMENTS.md``.
 """
 
 from __future__ import annotations
 
+import json
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -12,8 +18,12 @@ import numpy as np
 import yaml
 
 from .calibration import parse_transform
+from .geometry import make_pose
 
-__all__ = ["ObjectModel", "load_object_models"]
+__all__ = ["MOCKUP_BODY", "ObjectModel", "load_object_models"]
+
+#: mocap rigid body of the real mockups (models/real/)
+MOCKUP_BODY = "target"
 
 
 @dataclass(eq=False)
@@ -39,6 +49,9 @@ class ObjectModel:
     keypoints: np.ndarray | None = None
     #: Motive rigid-body export T_body_model was measured from (``pooh align-markers``), if any
     motive_file: str | None = None
+    #: trajectory -> T_world_body of a mockup that stood still, used where its mocap track is
+    #: missing (``models/real/mockups.json``)
+    static_poses: dict[str, np.ndarray] = field(default_factory=dict)
 
     @property
     def click_points(self) -> np.ndarray:
@@ -86,12 +99,11 @@ class ObjectModel:
 
 
 def load_object_models(models_dir: Path) -> dict[str, ObjectModel]:
-    """Parse ``models/objects.yaml``. Returns {} when the file is not there."""
+    """Parse ``models/objects.yaml`` and add the mockups of ``models/real/mockups.json``.
+    Returns {} when neither is there."""
     models_dir = Path(models_dir)
     cfg_path = models_dir / "objects.yaml"
-    if not cfg_path.exists():
-        return {}
-    cfg = yaml.safe_load(cfg_path.read_text()) or {}
+    cfg = (yaml.safe_load(cfg_path.read_text()) or {}) if cfg_path.exists() else {}
     out: dict[str, ObjectModel] = {}
     for i, (name, d) in enumerate(sorted(cfg.items()), start=1):
         common = dict(
@@ -113,4 +125,36 @@ def load_object_models(models_dir: Path) -> dict[str, ObjectModel]:
         if d.get("trajectories") is not None:
             m.trajectories = [str(t) for t in d["trajectories"]]
         out[name] = m
+    _add_mockups(out, models_dir)
     return out
+
+
+def _add_mockups(out: dict[str, ObjectModel], models_dir: Path) -> None:
+    """The real mockups (``models/real/``) as objects on the ``target`` mocap body. An entry of
+    the same name in objects.yaml wins (e.g. to set ``T_body_model``); its trajectories and
+    static poses are filled in from mockups.json."""
+    path = models_dir / "real" / "mockups.json"
+    if not path.exists():
+        return
+    by_mockup: dict[str, dict[str, dict]] = {}
+    for traj, entry in json.loads(path.read_text()).items():
+        by_mockup.setdefault(entry["model"], {})[traj] = entry
+    next_id = max((m.class_id for m in out.values()), default=0) + 1
+    for name, entries in sorted(by_mockup.items()):
+        m = out.get(name)
+        if m is None:
+            mesh = models_dir / "real" / name / "model.obj"
+            if not mesh.exists():
+                warnings.warn(f"models/real/{name}: no model.obj; mockup {name!r} has no object model",
+                              stacklevel=3)
+                continue
+            m = ObjectModel.from_mesh_file(name, mesh, class_id=next_id, mocap_body=MOCKUP_BODY)
+            next_id += 1
+            out[name] = m
+        if m.trajectories is None:
+            m.trajectories = sorted(entries)
+        for traj, e in entries.items():
+            p = e.get("static_pose")
+            if p is not None and traj not in m.static_poses:
+                m.static_poses[traj] = make_pose(np.asarray(p["position"], float),
+                                                 np.asarray(p["orientation_xyzw"], float))

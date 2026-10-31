@@ -169,6 +169,27 @@ The results are also copied into your local dataset right away. Check them with
 hf upload r3m3c3/off_test pooh_calibration . --repo-type dataset --exclude 'overlays_*/*'
 ```
 
+## Real targets
+
+`ds.objects` holds the CAD of every real target, read by the label tasks and exports:
+
+| object | trajectories | mocap body | CAD |
+|---|---|---|---|
+| `cubesat` | 007-009 | `cubesat` | `models/CubeSat_U1.obj` (`models/objects.yaml`) |
+| `antena` (mockup, two solar panels) | 010-039 | `target` | `models/real/antena/` |
+| `antena_1_solar` (mockup, one panel) | 040-098 | `target` | `models/real/antena_1_solar/` |
+
+The mockups come from `models/real/mockups.json` (trajectory -> mockup), written by the
+recording pipeline: `model.obj` + textures in metres, with the origin at the pivot of their
+Motive rigid body. Where the mockup's own tracking drops out, its `static_pose` in that file
+(mean of its mocap while it stood still) is used. An entry of the same name in
+`models/objects.yaml` overrides a mockup's `T_body_model`.
+
+Since trajectory_010 every camera is calibrated relative to the RealSense colour camera
+(`T_realsense_color_cam` in `calibration/<trajectory>.yaml`, from the rig calibration). The
+Firefly and the event camera get `T_body_cam = T_body_cam(realsense_color) @
+T_realsense_color_cam`, with the RealSense's `T_body_cam` from `calibration/rig.yaml`.
+
 ## Read and synchronize
 
 ```python
@@ -282,8 +303,8 @@ Calibration comes from the simulation (`calibration/<trajectory>.yaml`): intrins
 sensor's mount on the robot base, read as extrinsics on the `robot` mocap body (cameras in
 their optical frame). So `pooh_dataset.labels.camera_pose`, `traj.body_pose("target", t)` and
 `OpticalFlow(ds, ..., camera="rgb" | "events")` work as for the real data. The object tasks
-(`PoseEstimation`, `ObjectDetection`, `Segmentation`) need a CAD model in
-`models/objects.yaml` and are real-data only; in simulation, the `semantic` images give the
+(`PoseEstimation`, `ObjectDetection`, `Segmentation`) need a CAD model of a real target
+(see [Real targets](#real-targets)) and are real-data only; in simulation, the `semantic` images give the
 masks and the `target` mocap body the pose.
 
 Domains in `ds.split(..., domain=...)`: `real`, `synthetic` (all simulated), `sim_3d`,
@@ -297,9 +318,14 @@ Domains in `ds.split(..., domain=...)`: `real`, `synthetic` (all simulated), `si
 `pooh splits update --push`), append-only: a trajectory never changes split. All episodes of
 one recording run (same scenario, same seed) are in the same split, and about 20% of the runs
 of each scenario config (target, background or arm, task) are in `test`, so every task has
-eval runs from every day of recording. Real trajectories are not in the file yet: they keep
-the hash-based split (`trajectory_007`, `trajectory_008` train, `trajectory_009` test). Pin
-`--revision` to cite one version of the file.
+eval runs from every day of recording.
+
+Real trajectories are split by **lighting setting**: the target (mockup or CubeSat), the light's
+colour temperature and its intensity. Every trajectory of a setting is in the same split, so the
+test lighting is never seen in training. About 20% of each target's trajectories are in `test`,
+spread over the colour temperatures. Only real trajectories with a target model are in a split
+(`trajectory_007` to `009` keep their `benchmark_v1` split); the early recordings without one
+are in none. Pin `--revision` to cite one version of the file.
 
 ### Benchmarks (for papers)
 

@@ -87,7 +87,8 @@ class _FrameTask:
     def objects_in(self, traj: Trajectory) -> list[ObjectModel]:
         """The task's objects that were present (listed and tracked) in ``traj``."""
         bodies = set(traj.mocap_bodies) if traj.has("mocap") else set()
-        return [o for o in self.objects if o.present_in(traj.name) and o.mocap_body in bodies]
+        return [o for o in self.objects if o.present_in(traj.name)
+                and (o.mocap_body in bodies or traj.name in o.static_poses)]
 
     def _index_trajectory(self, traj: Trajectory, require_visible: bool) -> list[FrameRef]:
         ts = traj.timestamps(self._index_modality(traj))

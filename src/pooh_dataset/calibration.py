@@ -4,6 +4,10 @@ Calibration is read from ``calibration/rig.yaml`` (shared defaults, optional) me
 ``calibration/<trajectory>.yaml`` (per-trajectory override). See ``DATA_REQUIREMENTS.md``
 for the full schema.
 
+A camera calibrated relative to the RealSense colour camera (``T_realsense_color_cam`` in its
+entry, the rig calibration written by the real pipeline since trajectory_010) and without its
+own ``T_body_cam`` gets ``T_body_cam = T_body_cam(realsense_color) @ T_realsense_color_cam``.
+
 Simulated trajectories have their own format (no rig.yaml): each sensor has
 ``T_base_sensor`` (sensor frame x forward, y left, z up, in the robot base frame). It is read
 as extrinsics on the ``robot`` mocap body, with cameras turned into their optical frame
@@ -29,6 +33,8 @@ REQUIREMENTS_HINT = (
     "files the dataset needs to provide, and run `pooh check` to see what is missing."
 )
 RESERVED_KEYS = {"extrinsics", "time_offsets_ns"}
+#: camera the real rig calibration (``T_<camera>_cam`` in each camera entry) is relative to
+RIG_REFERENCE_CAMERA = "realsense_color"
 #: mocap body the simulated sensors are mounted on
 SIM_REFERENCE_BODY = "robot"
 #: optical frame (z forward, x right, y down) in a sensor frame (x forward, y left, z up)
@@ -160,6 +166,11 @@ class Calibration:
             name: parse_transform(v["T_body_cam"] if isinstance(v, dict) and "T_body_cam" in v else v)
             for name, v in (ext.get("cameras") or {}).items()
         }
+        T_ref = extrinsics.get(RIG_REFERENCE_CAMERA)
+        for name, v in data.items():
+            key = f"T_{RIG_REFERENCE_CAMERA}_cam"
+            if T_ref is not None and name not in extrinsics and isinstance(v, dict) and key in v:
+                extrinsics[name] = T_ref @ parse_transform(v[key])
         if not ext and _is_sim(data):
             ext = {"reference_body": SIM_REFERENCE_BODY}
             for name, v in data.items():

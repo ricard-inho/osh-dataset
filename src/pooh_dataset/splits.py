@@ -2,14 +2,21 @@
 
 The source of truth is ``splits.json`` at the dataset root::
 
-    {"version": 2,
-     "train": ["trajectory_hera_000001", ...],
+    {"version": 3,
+     "train": ["trajectory_010", "trajectory_hera_000001", ...],
      "val":   [],
-     "test":  ["trajectory_hera_000007", ...],
-     "summary": {"sim_3d/approach": {"train": 400, "test": 100}, ...}}
+     "test":  ["trajectory_014", "trajectory_hera_000007", ...],
+     "summary": {"real/antena": {"train": 24, "test": 6}, "sim_3d/approach": {"train": 400, "test": 100}, ...}}
 
-Real trajectories that ``splits.json`` does not list are assigned by a stable hash of their
-name, so adding new trajectories never moves an existing one to another split. Simulated
+The real part is written by :func:`update_real_splits` (``pooh splits update``): the real
+trajectories with a target model (a mockup of ``models/real/mockups.json`` or an object of
+``models/objects.yaml``) are grouped by lighting *setting* (target, light colour temperature
+and intensity), and whole settings go to ``test`` so that no test lighting is seen in
+training, about ``eval_fraction`` of each target's trajectories, spread over the colour
+temperatures. Also append-only. Real trajectories without a target model are in no split.
+
+Before version 3, real trajectories that ``splits.json`` did not list were assigned by a stable
+hash of their name; :func:`load_splits` still does that for such files. Simulated
 trajectories it does not list are in no split until :func:`update_sim_splits` adds them.
 
 The simulated part is written by :func:`update_sim_splits` (``pooh splits update``, also run
@@ -39,13 +46,13 @@ import warnings
 from collections.abc import Iterable
 from pathlib import Path
 
-__all__ = ["BENCHMARKS", "EVAL_FRACTION", "SPLIT_NAMES", "hash_split", "load_benchmark", "load_splits", "sim_run",
-           "update_sim_splits"]
+__all__ = ["BENCHMARKS", "EVAL_FRACTION", "SPLIT_NAMES", "hash_split", "light_setting", "load_benchmark",
+           "load_splits", "real_targets", "sim_run", "update_real_splits", "update_sim_splits"]
 
 SPLIT_NAMES = ("train", "val", "test")
 #: share of the recording runs of each simulated scenario config that go to ``test``
 EVAL_FRACTION = 0.2
-VERSION = 2
+VERSION = 3
 
 BENCHMARK_DIR = Path(__file__).resolve().parent / "benchmarks"
 #: frozen benchmark versions shipped with the package
@@ -87,11 +94,12 @@ def load_benchmark(name: str) -> dict:
 
 
 def load_splits(root: Path, trajectories: list[str], unlisted: Iterable[str] = ()) -> dict[str, list[str]]:
-    """Splits of ``trajectories`` from ``splits.json``; those of ``unlisted`` (the real
-    trajectories) that it does not list, or all of them without the file, get
-    :func:`hash_split`."""
+    """Splits of ``trajectories`` from ``splits.json``; before version 3 (or without the file)
+    those of ``unlisted`` (the real trajectories) that it does not list get :func:`hash_split`."""
     path = Path(root) / "splits.json"
     data = json.loads(path.read_text()) if path.exists() else {}
+    if data.get("version", 0) >= 3:
+        unlisted = ()
     known = set(trajectories)
     splits = {k: [t for t in data.get(k, []) if t in known] for k in SPLIT_NAMES}
     splits.update({k: v for k, v in data.items() if k not in SPLIT_NAMES and isinstance(v, list)})
@@ -106,6 +114,86 @@ def load_splits(root: Path, trajectories: list[str], unlisted: Iterable[str] = (
     for t in hashed:
         splits[hash_split(t)].append(t)
     return splits
+
+
+RULE = ("simulated: per recording run, the eval fraction of the runs of each scenario config in test; real: per "
+        "lighting setting (target, colour temperature, intensity), the eval fraction of each target's trajectories "
+        "in test; real trajectories without a target model are in no split. Append-only (pooh_dataset.splits)")
+
+
+def light_setting(light: dict | None) -> tuple:
+    """(colour temperature K, intensity) of a real trajectory's ``light`` entry in manifest.json."""
+    light = light or {}
+    return light.get("color_temperature_k"), light.get("intensity")
+
+
+def real_targets(objects_yaml: dict | None, mockups: dict | None) -> dict[str, str]:
+    """Real trajectory -> its target model, from ``models/objects.yaml`` (objects that list their
+    ``trajectories``) and ``models/real/mockups.json``."""
+    out = {}
+    for name, d in (objects_yaml or {}).items():
+        for t in (d or {}).get("trajectories") or []:
+            out[str(t)] = name
+    out.update({t: e["model"] for t, e in (mockups or {}).items()})
+    return out
+
+
+def update_real_splits(splits: dict | None, targets: dict[str, str], light: dict[str, dict],
+                       eval_fraction: float = EVAL_FRACTION) -> dict:
+    """``splits.json`` content with the real trajectories of ``targets`` (trajectory -> target
+    model, see :func:`real_targets`) that it does not list yet added, per lighting setting
+    (``light``: manifest.json's trajectory -> light entry). Listed trajectories and those of the
+    frozen benchmarks never move; a setting that already has a split keeps it. Returns a new dict."""
+    old = dict(splits or {})
+    assigned = {t: k for k in SPLIT_NAMES for t in old.get(k, [])}
+    for version in BENCHMARKS:
+        b = load_benchmark(version)
+        for k in SPLIT_NAMES:
+            for t in b[k]:
+                if t in targets:
+                    assigned.setdefault(t, k)
+    groups: dict[tuple, list[str]] = {}
+    for t in sorted(targets):
+        groups.setdefault((targets[t],) + light_setting(light.get(t)), []).append(t)
+
+    lists = {k: set(old.get(k, [])) for k in SPLIT_NAMES}
+    count: dict[str, dict[str, int]] = {}
+    new = []
+    for key, ts in groups.items():
+        cnt = count.setdefault(key[0], {"train": 0, "test": 0})
+        have = [assigned[t] for t in ts if t in assigned]
+        for t in ts:
+            if t in assigned:
+                lists[assigned[t]].add(t)
+                cnt[assigned[t]] = cnt.get(assigned[t], 0) + 1
+        if len(have) < len(ts):
+            new.append((key, [t for t in ts if t not in assigned], have[0] if have else None))
+    # New settings in order of colour temperature, then intensity: the test settings spread over
+    # the range. A setting goes to test when that keeps its target's test share closest to
+    # eval_fraction.
+    for key, ts, fixed in sorted(new, key=lambda x: (x[0][0], x[0][1] is None, x[0][1] or 0, x[0][2] is None,
+                                                     x[0][2] or 0, x[1][0])):
+        cnt = count[key[0]]
+        if fixed is None:
+            n = cnt["train"] + cnt["test"] + len(ts)
+            to_test = abs(cnt["test"] + len(ts) - eval_fraction * n) < abs(cnt["test"] - eval_fraction * n)
+            fixed = "test" if to_test else "train"
+        for t in ts:
+            lists[fixed].add(t)
+        cnt[fixed] = cnt.get(fixed, 0) + len(ts)
+
+    out = dict(old)
+    for k in SPLIT_NAMES:
+        out[k] = sorted(lists[k])
+    summary = {k: v for k, v in old.get("summary", {}).items() if not k.startswith("real/")}
+    for t, target in targets.items():
+        for k in SPLIT_NAMES:
+            if t in lists[k]:
+                cell = summary.setdefault(f"real/{target}", {s: 0 for s in SPLIT_NAMES})
+                cell[k] += 1
+    out.update({"version": VERSION, "rule": RULE, "eval_fraction": eval_fraction,
+                "summary": dict(sorted(summary.items()))})
+    return out
 
 
 def update_sim_splits(splits: dict | None, sim_manifest: dict, eval_fraction: float = EVAL_FRACTION) -> dict:
@@ -166,10 +254,10 @@ def update_sim_splits(splits: dict | None, sim_manifest: dict, eval_fraction: fl
                 run = runs[sim_run(entries[t].get("source_dir", t))["run"]]
                 cell = summary.setdefault(f"{run['group']}/{run['task']}", {s: 0 for s in SPLIT_NAMES})
                 cell[k] += 1
+    summary.update({k: v for k, v in old.get("summary", {}).items() if k.startswith("real/")})
     out.update({
         "version": VERSION,
-        "rule": (f"simulated: per recording run, {eval_fraction:.0%} of the runs of each scenario config in "
-                 "test, append-only; real: not listed yet, hash of the trajectory name (pooh_dataset.splits)"),
+        "rule": RULE,
         "eval_fraction": eval_fraction,
         **{k: sorted(lists[k]) for k in SPLIT_NAMES},
         "summary": dict(sorted(summary.items())),
