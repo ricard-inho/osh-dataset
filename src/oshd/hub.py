@@ -28,6 +28,7 @@ __all__ = [
     "SIM_MODALITIES",
     "default_root",
     "download",
+    "is_twin",
     "remote_manifest",
     "remote_sim_manifest",
 ]
@@ -39,8 +40,9 @@ REAL_MODALITIES = ("events", "firefly", "realsense_color", "realsense_depth", "l
 #: simulated recordings: Hub folder ``<group>_<modality>``
 SIM_GROUPS = ("sim_3d", "sim_zerog")
 SIM_MODALITIES = ("rgb", "depth", "semantic", "events", "lidar", "mocap", "imu", "joint_states", "steps")
-#: values of ``domain``: a domain, both, or one simulation group
-DOMAINS = ("real", "synthetic", "all") + SIM_GROUPS
+#: values of ``domain``: a domain, both, one simulation group, or ``twin``: the zero-G lab twins of
+#: the real mockup recordings (sim_zerog trajectories whose target is a real mockup, ``real_<mockup>``)
+DOMAINS = ("real", "synthetic", "all") + SIM_GROUPS + ("twin",)
 
 MANIFEST = "manifest.json"
 SIM_MANIFEST = "sim_manifest.json"
@@ -69,8 +71,17 @@ def domain_parts(domain: str) -> tuple[bool, list[str]]:
     if domain not in DOMAINS:
         raise ValueError(f"unknown domain {domain!r}; use one of {DOMAINS}")
     real = domain in ("real", "all")
+    if domain == "twin":
+        return False, ["sim_zerog"]
     groups = list(SIM_GROUPS) if domain in ("synthetic", "all") else [g for g in SIM_GROUPS if g == domain]
     return real, groups
+
+
+def is_twin(info: dict) -> bool:
+    """Whether a simulated trajectory (its manifest entry) is the lab twin of a real mockup
+    recording: scenario ``zerog/real_<mockup>/static/<task>``."""
+    parts = str(info.get("scenario") or "").split("/")
+    return info.get("group") == "sim_zerog" and len(parts) > 1 and parts[1].startswith("real_")
 
 
 def remote_manifest(repo_id: str = DEFAULT_REPO_ID, revision: str | None = None) -> dict:
@@ -139,7 +150,7 @@ def download(
         if revision not in (None, b["revision"]):
             raise ValueError(f"{b['name']} is pinned to revision {b['revision']}, not {revision}")
         revision = b["revision"]
-    if trajs is None and (split is not None or task is not None or benchmark is not None):
+    if trajs is None and (split is not None or task is not None or benchmark is not None or domain == "twin"):
         # Pick the trajectories from the manifests and splits.json, then fetch them by name.
         from .dataset import OshDataset
 

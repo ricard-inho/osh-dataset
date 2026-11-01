@@ -264,11 +264,51 @@ class Trajectory:
 
     def lidar_scan(self, index: int) -> dict[str, np.ndarray]:
         """One scan: arrays x, y, z, ... + scalars. Real (Mid-360): intensity, tag, line,
-        timestamp; simulated: distance, channel, with points in the sensor frame."""
+        timestamp; simulated: distance, channel, with points in the sensor frame.
+
+        Simulated scans recorded before the fix of the sensor origin (Hub data up to benchmark_v2,
+        revision df3530b: their calibration has no ``lidar.points_origin``) are about the robot's
+        mount link, off by the mount offset ``T_base_sensor``; they are re-expressed about the
+        sensor here (``distance`` and ``channel`` recomputed), so every revision reads the same."""
         path, rg, off = self._locate("lidar", index)
         cols = [c for c in self._parquet(path).schema_arrow.names if c != TRAJECTORY_ID]
         row = self._parquet(path).read_row_group(rg, columns=cols).slice(off, 1).to_pylist()[0]
-        return {k: (np.asarray(v) if isinstance(v, list) else v) for k, v in row.items()}
+        scan = {k: (np.asarray(v) if isinstance(v, list) else v) for k, v in row.items()}
+        fix = self._lidar_origin_fix
+        if fix is not None and len(scan.get("x", ())):
+            t, R_off, channels, (v_lo, v_hi) = fix
+            P = (np.stack([scan["x"], scan["y"], scan["z"]], 1).astype(np.float64) - t) @ R_off
+            dist = np.linalg.norm(P, axis=1)
+            elev = np.arcsin(np.clip(P[:, 2] / np.maximum(dist, 1e-9), -1.0, 1.0))
+            chan = np.clip(np.round((elev - v_lo) / max(v_hi - v_lo, 1e-9) * (channels - 1)), 0, channels - 1)
+            dtype = scan["x"].dtype
+            scan.update(x=P[:, 0].astype(dtype), y=P[:, 1].astype(dtype), z=P[:, 2].astype(dtype))
+            if "distance" in scan:
+                scan["distance"] = dist.astype(scan["distance"].dtype)
+            if "channel" in scan:
+                scan["channel"] = chan.astype(scan["channel"].dtype)
+        return scan
+
+    @cached_property
+    def _lidar_origin_fix(self):
+        """(t, R_off, channels, vertical fov rad) for simulated scans about the mount link, else None."""
+        path = self.root / "calibration" / f"{self.name}.yaml"
+        if not path.exists():
+            return None
+        import yaml
+
+        from .geometry import quat_to_rotmat
+
+        lc = (yaml.safe_load(path.read_text()) or {}).get("lidar") or {}
+        if lc.get("source") != "simulation" or "points_origin" in lc or "T_base_sensor" not in lc:
+            return None
+        tb = lc["T_base_sensor"]
+        t = np.asarray(tb.get("translation_m") or [0.0, 0.0, 0.0], float)
+        R_off = quat_to_rotmat(np.asarray(tb.get("rotation_xyzw") or [0.0, 0.0, 0.0, 1.0], float))
+        if not t.any() and np.allclose(R_off, np.eye(3)):
+            return None
+        fov = np.radians(lc.get("vertical_fov_deg") or [-15.0, 15.0])
+        return t, R_off, int(lc.get("channels", 16)), tuple(fov)
 
     # ------------------------------------------------------------ simulation
 

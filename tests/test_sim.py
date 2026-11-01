@@ -137,3 +137,37 @@ def test_target_cad(ds):
         assert ds["trajectory_a"].target is None and ds["trajectory_a"].target_model_path is None
     finally:
         shutil.rmtree(ds.root / "models" / "sim", ignore_errors=True)
+
+
+def test_lidar_origin_fix(ds):
+    """Scans recorded about the mount link (no lidar.points_origin) are shifted to the sensor."""
+    import yaml
+
+    from oshd import OshDataset
+
+    path = ds.root / "calibration" / f"{SIM_TRAJ}.yaml"
+    original = path.read_text()
+    try:
+        cal = yaml.safe_load(original)
+        cal["lidar"].update(channels=16, vertical_fov_deg=[-15.0, 15.0])
+        cal["lidar"]["T_base_sensor"] = {"parent": "robot base", "translation_m": [0.5, 0.0, 0.25],
+                                         "rotation_xyzw": [0.0, 0.0, 0.0, 1.0]}
+        path.write_text(yaml.safe_dump(cal))
+        scan = OshDataset(ds.root)[SIM_TRAJ].lidar_scan(0)
+        assert np.allclose([scan["x"][0], scan["y"][0], scan["z"][0]], [SIM_TARGET_X - 0.5, 0.0, -0.25], atol=1e-6)
+        assert np.isclose(scan["distance"][0], np.hypot(SIM_TARGET_X - 0.5, 0.25), atol=1e-5)
+        cal["lidar"]["points_origin"] = "sensor"  # fixed data: read as is
+        path.write_text(yaml.safe_dump(cal))
+        scan = OshDataset(ds.root)[SIM_TRAJ].lidar_scan(0)
+        assert np.isclose(scan["x"][0], SIM_TARGET_X) and scan["channel"][0] == 3
+    finally:
+        path.write_text(original)
+
+
+def test_twin_domain():
+    from oshd.hub import DOMAINS, domain_parts, is_twin
+
+    assert "twin" in DOMAINS and domain_parts("twin") == (False, ["sim_zerog"])
+    assert is_twin({"group": "sim_zerog", "scenario": "zerog/real_antena/static/docking"})
+    assert not is_twin({"group": "sim_zerog", "scenario": "zerog/satellite_mockup/arm_wall/docking"})
+    assert not is_twin({"group": "sim_3d", "scenario": "orbital/real_x/earth/orbit"})

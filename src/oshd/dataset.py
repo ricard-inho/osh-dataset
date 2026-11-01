@@ -15,6 +15,7 @@ from .hub import (
     default_root,
     domain_parts,
     download,
+    is_twin,
 )
 from .objects import ObjectModel, load_object_models
 from .splits import load_benchmark, load_splits, sim_run
@@ -163,12 +164,15 @@ class OshDataset:
             return real
         if domain in ("synthetic", "all"):
             return True
+        if domain == "twin":
+            return is_twin(info)
         return info.get("group") in groups  # one simulation group
 
     def split(self, name: str | Iterable[str], domain: str | None = None, task: str | None = None,
               benchmark: str | None = None) -> list[str]:
         """Trajectory names of a split ("train", "val", "test", "all" or an explicit list),
-        optionally restricted to a domain ("real", "synthetic", "sim_3d", "sim_zerog") and a
+        optionally restricted to a domain ("real", "synthetic", "sim_3d", "sim_zerog", "twin": the lab
+        twins of the real mockup recordings, part of sim_zerog) and a
         simulated task ("approach", "orbit", "docking", "inspection").
 
         ``benchmark`` ("v1") takes the split from that frozen benchmark instead of
