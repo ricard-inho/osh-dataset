@@ -86,7 +86,9 @@ def cmd_splits(args) -> None:
         b = load_benchmark(args.benchmark)
         print(f"{b['name']}: {b['repo_id']}@{b['revision'][:7]}, frozen {b['frozen']}")
     rows: dict[str, dict[str, int]] = {}
-    for split in ("train", "val", "test"):
+    if args.benchmark:  # the frozen counts: they need no local manifest
+        rows = {k: dict(v) for k, v in b.get("summary", {}).items()}
+    for split in ("train", "val", "test") if not rows else ():
         for t in ds.split(split, benchmark=args.benchmark):
             info = ds.trajectory_info(t)
             cell = f"{info.get('group') or info['domain']}/{info['task']}" if info.get("task") else \

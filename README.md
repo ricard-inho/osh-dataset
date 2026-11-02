@@ -293,6 +293,20 @@ target_mask = sem == traj.semantic_classes["target"]
 T_world_cam, ok = camera_pose(traj, "rgb", traj.timestamps("rgb")[0])
 ```
 
+**Lab twins of the real mockups.** 200 zero-G lab trajectories (100 per mockup, `benchmark_v3`)
+put the real mockups' CAD (`real_antena`, `real_antena_1_solar`, in the dataset's CAD frame of
+`models/real/<mockup>/`) on a static mount at one of the stand poses measured in the real
+recordings (17 for `antena`, 32 for `antena_1_solar`; world frame of the lab, which the twin
+shares), and fly the same inspection and docking tasks as the other lab runs. Scenario
+`zerog/real_<mockup>/static/<task>`; `ds.split("train" | "test", domain="twin")` gives them.
+With `ds.split(..., domain="real")` they make the real <-> twin transfer pairs.
+
+**Lidar frame.** Simulated scans are in the lidar sensor frame. Scans recorded before the twins
+(Hub revisions up to `benchmark_v2`, `df3530b`) were stored about the robot's mount link, off by
+the mount offset (`T_base_sensor`: 0.21, 0, 0.76 m in the lab); the Hub data from `benchmark_v3`
+on is corrected (calibration `lidar.points_origin: sensor`), and oshd >= 1.1 corrects the older
+files when it reads them, so `traj.lidar_scan(i)` is right at every revision.
+
 **Target CAD.** Every simulated trajectory observes one target, and its CAD is on the Hub. The
 satellite mockup, ISS, Gateway and Venus Express come from SRB's assets; a `cubesat<seed>` is
 SimForge's procedural CubeSat, generated from the scenario seed. `oshd download` fetches the
@@ -314,7 +328,8 @@ their optical frame). So `oshd.labels.camera_pose`, `traj.body_pose("target", t)
 masks and the `target` mocap body the pose.
 
 Domains in `ds.split(..., domain=...)`: `real`, `synthetic` (all simulated), `sim_3d`,
-`sim_zerog`. Tasks in `ds.split(..., task=...)`: `approach` and `orbit` (sim_3d), `docking` and
+`sim_zerog`, and `twin`: the zero-G lab twins of the real mockup recordings (part of
+`sim_zerog`, from `benchmark_v3` on). Tasks in `ds.split(..., task=...)`: `approach` and `orbit` (sim_3d), `docking` and
 `inspection` (sim_zerog).
 
 ### Splits
@@ -342,26 +357,34 @@ one Hub revision with a fixed train / test split. It ships with the package
 | benchmark | Hub revision | trajectories | train / test |
 |---|---|---|---|
 | `v1` (`benchmark_v1`, frozen 2026-10-20) | `8205a11` | 2195 sim + 3 real | sim_3d/approach 378 / 93, sim_3d/orbit 800 / 201, sim_zerog/docking 300 / 72, sim_zerog/inspection 282 / 69, real 2 / 1 |
-| **`v2`** (`benchmark_v2`, frozen 2026-10-31, oshd 1.0.0) | `df3530b` | 6413 sim + 92 real | sim_3d/approach 1089 / 186, sim_3d/orbit 2528 / 522, sim_zerog/docking 921 / 162, sim_zerog/inspection 861 / 144, real/antena 24 / 6, real/antena_1_solar 49 / 10, real/cubesat 2 / 1 |
+| `v2` (`benchmark_v2`, frozen 2026-10-31, oshd 1.0.0) | `df3530b` | 6413 sim + 92 real | sim_3d/approach 1089 / 186, sim_3d/orbit 2528 / 522, sim_zerog/docking 921 / 162, sim_zerog/inspection 861 / 144, real/antena 24 / 6, real/antena_1_solar 49 / 10, real/cubesat 2 / 1 |
+| **`v3`** (`benchmark_v3`, frozen 2026-11-02, oshd 1.1.0) | `c8e5ca0` | 6613 sim + 92 real | v2 + the lab twins: twin/antena 80 / 20, twin/antena_1_solar 80 / 20 (in sim_zerog/docking 999 / 182, sim_zerog/inspection 943 / 164); simulated lidar about the sensor origin |
 
 `v2` is the final data collection: every simulated campaign and every real recording with a
 target model (the CubeSat and both mockups, with their CAD, rig calibration and real lighting
 -setting split). It contains `v1`, and every `v1` trajectory keeps its split.
 
+`v3` adds the zero-G lab twins of the real mockup recordings (see [Simulated data](#simulated-data)),
+for real <-> twin transfer: train on `domain="real"` and test on `domain="twin"`, or the other
+way round. Its Hub revision also has the simulated lidar re-expressed about the sensor. It
+contains `v2`, and every `v2` trajectory keeps its split. **Use `v3` for new work.**
+
 ```bash
-oshd download --benchmark v2 --domain sim_zerog --task docking --split test -m rgb -m depth -m mocap
-oshd download --benchmark v2 --domain real --split test -m realsense_color -m realsense_depth -m mocap
-oshd splits --benchmark v2
+oshd download --benchmark v3 --domain sim_zerog --task docking --split test -m rgb -m depth -m mocap
+oshd download --benchmark v3 --domain twin --split train -m rgb -m events -m mocap
+oshd download --benchmark v3 --domain real --split test -m realsense_color -m realsense_depth -m mocap
+oshd splits --benchmark v3
 ```
 
 ```python
-ds = OshDataset.download(benchmark="v2", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
-ds.split("test", domain="sim_zerog", task="docking", benchmark="v2")
+ds = OshDataset.download(benchmark="v3", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
+ds.split("test", domain="sim_zerog", task="docking", benchmark="v3")
+ds.split("test", domain="twin", benchmark="v3")       # 40 twin trajectories
 ```
 
 `--benchmark` pins the download to the benchmark's revision, so later uploads and repairs never
 change its data. For `v1` the target CAD was uploaded after the freeze, so it comes from its
-`models_revision` (`22a8431`); `v2` has everything at its own revision. Its simulated trajectories keep their split in the growing `splits.json` too.
+`models_revision` (`22a8431`); `v2` and `v3` have everything at their own revision. Its simulated trajectories keep their split in the growing `splits.json` too.
 Cite the benchmark name and revision in the paper. `ds.hub_splits` gives the splits shown by the Hub viewer (simulation scenarios and
 groups of real trajectories); they organise the data and are not train / test splits.
 

@@ -10,7 +10,7 @@ Quick start::
     sim = OshDataset.download(domain="sim_3d", modalities=["rgb", "mocap"])
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from .calibration import Calibration, CameraIntrinsics, MissingCalibrationError
 from .dataset import OshDataset
