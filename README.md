@@ -60,6 +60,33 @@ narrow it down. With `-t`, the named trajectories are downloaded whatever their 
 The default location is `~/.cache/oshd/<repo>`. Override it with `--root` or
 `$OSHD_DATA_DIR`, and point at another repo with `--repo` / `$OSHD_REPO_ID`.
 
+### Derived copies of the real recordings
+
+The repo also holds three copies of 76 real trajectories, derived by `oshd-isolate`
+(osh_dataset_pipeline, `real/isolate/`). Each sits in its own Hub folder with the layout above:
+
+| `--variant` | content |
+| --- | --- |
+| `isolated` | every modality with only the target mockup, the lab removed; adds `firefly_semantic` and `realsense_color_semantic` |
+| `coregistered` | the original recordings in one reference view (the Firefly's), one modality `coregistered` |
+| `isolated_coregistered` | the isolated copy in that reference view |
+
+```bash
+oshd download --variant isolated -t trajectory_026 -m firefly -m events
+oshd download --variant isolated_coregistered --split test
+```
+
+```python
+ds = OshDataset.download(variant="isolated", trajectories="trajectory_026", modalities="events")
+ds.root  # ~/.cache/oshd/r3m3c3--oshd/isolated
+```
+
+A variant lands in `<root>/<variant>` and opens like the original. Other downloads never fetch
+the variants (oshd 1.1.0 and older also fetch them for real trajectories selected with `-t` or
+`--split` and no `-m`: upgrade). The pinned benchmarks predate the variants, so `--benchmark` and `--variant` do not combine.
+`oshd` reads the `image` channel of `coregistered`. The pipeline's
+`oshd_isolate.coregister.coregistered_frame(ds[trajectory], k)` decodes every channel of row `k`.
+
 ## Inspect trajectories: is it good or bad?
 
 **Health report**: runs in seconds on mocap + messages only.

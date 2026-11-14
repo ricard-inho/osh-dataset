@@ -9,6 +9,9 @@ Hub layout (one repo for the real and the simulated recordings)::
     metadata/<trajectory>.yaml                      simulated only (scenario, rates, ...)
     models/                                         object models (real)
     models/sim/targets.json, models/sim/<model>/    simulated targets: trajectory -> CAD + scale
+    <variant>/                                      a derived copy of the real recordings in the
+                                                    layout above (manifest.json, calibration/,
+                                                    models/, <modality>/<trajectory>/) plus isolate/
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ __all__ = [
     "REAL_MODALITIES",
     "SIM_GROUPS",
     "SIM_MODALITIES",
+    "VARIANTS",
     "default_root",
     "download",
     "is_twin",
@@ -44,6 +48,13 @@ SIM_MODALITIES = ("rgb", "depth", "semantic", "events", "lidar", "mocap", "imu",
 #: the real mockup recordings (sim_zerog trajectories whose target is a real mockup, ``real_<mockup>``)
 DOMAINS = ("real", "synthetic", "all") + SIM_GROUPS + ("twin",)
 
+#: derived copies of the real recordings (oshd-isolate), each in its own Hub folder: without the lab
+#: (``isolated``), and the original / isolated recordings re-expressed in one reference view
+#: (``coregistered`` / ``isolated_coregistered``, modality ``coregistered``)
+VARIANTS = ("isolated", "coregistered", "isolated_coregistered")
+#: a variant's own metadata: corrections, configuration, statistics
+VARIANT_META = ["isolate/*"]
+
 MANIFEST = "manifest.json"
 SIM_MANIFEST = "sim_manifest.json"
 #: small files always fetched: manifests, dataset card, splits, object models
@@ -51,6 +62,8 @@ META_PATTERNS = ["README.md", MANIFEST, SIM_MANIFEST, "splits.json", "models/*"]
 #: the simulated targets' CAD is fetched per trajectory (download_sim_targets), not with the metadata
 META_IGNORE = ["models/sim/*"]
 SIM_TARGETS = "models/sim/targets.json"
+#: never fetched with the recordings: Hub patterns match across folders (``*/<trajectory>/*``)
+IGNORE = META_IGNORE + [f"{v}/*" for v in VARIANTS]
 
 
 def default_root(repo_id: str = DEFAULT_REPO_ID) -> Path:
@@ -118,6 +131,7 @@ def download(
     split: str | None = None,
     task: str | None = None,
     benchmark: str | None = None,
+    variant: str | None = None,
 ) -> Path:
     """Download (or resume / update) part of the dataset and return the local root.
 
@@ -137,75 +151,142 @@ def download(
     Already-downloaded files are skipped, so calling this again after new trajectories were
     added only fetches the new ones. Pin ``revision`` (a commit sha or tag) for reproducible
     experiments.
+
+    ``variant`` (one of :data:`VARIANTS`) downloads that derived copy of the real recordings
+    instead, with the same ``trajectories``, ``modalities``, ``split`` and ``revision``, into
+    ``<root>/<variant>``, and returns that folder. Without it, the derived copies are never
+    fetched.
     """
     from huggingface_hub import snapshot_download
 
     root = Path(root) if root is not None else default_root(repo_id)
     trajs, mods = _as_list(trajectories), _as_list(modalities)
+    if variant is not None:
+        return _download_variant(repo_id, root, variant, trajs, mods, revision, max_workers, domain, split, task,
+                                 benchmark)
     real, groups = domain_parts(domain)
-    if benchmark is not None:
-        from .splits import load_benchmark
-
-        b = load_benchmark(benchmark)
-        if revision not in (None, b["revision"]):
-            raise ValueError(f"{b['name']} is pinned to revision {b['revision']}, not {revision}")
-        revision = b["revision"]
-    if trajs is None and (split is not None or task is not None or benchmark is not None or domain == "twin"):
+    revision, models_revision = _pin(benchmark, revision)
+    if trajs is None and _selects(domain, split, task, benchmark):
         # Pick the trajectories from the manifests and splits.json, then fetch them by name.
-        from .dataset import OshDataset
-
         snapshot_download(repo_id, repo_type="dataset", revision=revision, local_dir=root,
-                          allow_patterns=META_PATTERNS, ignore_patterns=META_IGNORE, max_workers=max_workers)
-        trajs = OshDataset(root, repo_id).split(split or "all", domain, task=task, benchmark=benchmark)
-        if not trajs:
-            raise ValueError(f"no trajectory with domain={domain!r} split={split!r} task={task!r} "
-                             f"benchmark={benchmark!r}")
-
+                          allow_patterns=META_PATTERNS, ignore_patterns=IGNORE, max_workers=max_workers)
+        trajs = _select(root, repo_id, domain, split, task, benchmark)
     if trajs is not None:
-        # Trajectory names are unique across domains: match both layouts.
-        names = trajs
-        if mods is None:
-            data = [f"*/{t}/*.parquet" for t in trajs]
-        else:
-            data = [p for m in mods for t in trajs for p in (f"{m}/{t}/*.parquet", f"sim_*_{m}/{t}/*.parquet")]
-        sim = True
+        names, data, sim = trajs, _named_patterns(trajs, mods), True
     else:
-        names = []
-        data = [f"{m}/*/*.parquet" for m in (mods or REAL_MODALITIES)] if real else []
-        data += [f"{g}_{m}/*/*.parquet" for g in groups for m in (mods or ["*"])]
-        sim = bool(groups)
-        if real:  # real calibration by name: the sim calibration files are many
-            from huggingface_hub import hf_hub_download
-
-            manifest = hf_hub_download(repo_id, MANIFEST, repo_type="dataset", revision=revision,
-                                       local_dir=root)
-            names = list(json.loads(Path(manifest).read_text()).get("trajectories", {}))
-
-    side = ["calibration/rig.yaml", "calibration/clicks_*"]
-    side += [f"{d}/{t}.yaml" for t in names for d in ("calibration", "metadata")]
-    if sim and trajs is None:
-        side += ["calibration/*", "metadata/*"]
+        names, data, sim = _all_patterns(repo_id, root, revision, mods, real, groups)
+    side = _side_patterns(names, every_sim=sim and trajs is None)
     snapshot_download(
         repo_id,
         repo_type="dataset",
         revision=revision,
         local_dir=root,
         allow_patterns=META_PATTERNS + side + data,
-        ignore_patterns=META_IGNORE,
+        ignore_patterns=IGNORE,
         max_workers=max_workers,
     )
     if sim:
-        if trajs is not None:
-            sim_names = trajs
-        else:
-            sim_trajs = json.loads((root / SIM_MANIFEST).read_text()).get("trajectories", {}) \
-                if (root / SIM_MANIFEST).exists() else {}
-            sim_names = [t for t, e in sim_trajs.items() if e.get("group") in groups]
-        models_revision = revision
-        if benchmark is not None:  # the benchmark's data revision predates the models
-            models_revision = b.get("models_revision", revision)
-        download_sim_targets(repo_id, root, sim_names, models_revision, max_workers)
+        download_sim_targets(repo_id, root, _sim_names(root, groups) if trajs is None else trajs, models_revision,
+                             max_workers)
     return root
+
+
+def _selects(domain: str, split: str | None, task: str | None, benchmark: str | None) -> bool:
+    """Whether the trajectories come from the manifests and splits.json rather than whole domains."""
+    return split is not None or task is not None or benchmark is not None or domain == "twin"
+
+
+def _side_patterns(names: list[str], every_sim: bool) -> list[str]:
+    """Calibration and metadata of ``names`` (``every_sim``: of every simulated trajectory too)."""
+    side = ["calibration/rig.yaml", "calibration/clicks_*"]
+    side += [f"{d}/{t}.yaml" for t in names for d in ("calibration", "metadata")]
+    return side + (["calibration/*", "metadata/*"] if every_sim else [])
+
+
+def _pin(benchmark: str | None, revision: str | None) -> tuple[str | None, str | None]:
+    """Revisions of the data and of the simulated targets' models: a frozen benchmark pins both (its
+    data revision predates the models)."""
+    if benchmark is None:
+        return revision, revision
+    from .splits import load_benchmark
+
+    b = load_benchmark(benchmark)
+    if revision not in (None, b["revision"]):
+        raise ValueError(f"{b['name']} is pinned to revision {b['revision']}, not {revision}")
+    return b["revision"], b.get("models_revision", b["revision"])
+
+
+def _select(root: Path, repo_id: str, domain: str, split: str | None, task: str | None,
+            benchmark: str | None = None) -> list[str]:
+    """The trajectories of a split / task, from the manifests and splits.json under ``root``."""
+    from .dataset import OshDataset
+
+    trajs = OshDataset(root, repo_id).split(split or "all", domain, task=task, benchmark=benchmark)
+    if not trajs:
+        raise ValueError(f"no trajectory in {root} with domain={domain!r} split={split!r} task={task!r} "
+                         f"benchmark={benchmark!r}")
+    return trajs
+
+
+def _named_patterns(trajs: list[str], mods: list[str] | None) -> list[str]:
+    """Data of named trajectories. Trajectory names are unique across domains: match both layouts."""
+    if mods is None:
+        return [f"*/{t}/*.parquet" for t in trajs]
+    return [p for m in mods for t in trajs for p in (f"{m}/{t}/*.parquet", f"sim_*_{m}/{t}/*.parquet")]
+
+
+def _all_patterns(repo_id: str, root: Path, revision: str | None, mods: list[str] | None, real: bool,
+                  groups: list[str]) -> tuple[list[str], list[str], bool]:
+    """(real trajectory names, data patterns, whether simulated data is included) of whole domains."""
+    data = [f"{g}_{m}/*/*.parquet" for g in groups for m in (mods or ["*"])]
+    if not real:
+        return [], data, bool(groups)
+    from huggingface_hub import hf_hub_download
+
+    # real calibration by name: the sim calibration files are many
+    manifest = hf_hub_download(repo_id, MANIFEST, repo_type="dataset", revision=revision, local_dir=root)
+    names = list(json.loads(Path(manifest).read_text()).get("trajectories", {}))
+    return names, [f"{m}/*/*.parquet" for m in (mods or REAL_MODALITIES)] + data, bool(groups)
+
+
+def _sim_names(root: Path, groups: list[str]) -> list[str]:
+    """Simulated trajectories of ``groups`` in the local ``sim_manifest.json``."""
+    path = root / SIM_MANIFEST
+    sim_trajs = json.loads(path.read_text()).get("trajectories", {}) if path.exists() else {}
+    return [t for t, e in sim_trajs.items() if e.get("group") in groups]
+
+
+def _check_variant(variant: str, domain: str, benchmark: str | None) -> None:
+    if variant not in VARIANTS:
+        raise ValueError(f"unknown variant {variant!r}; use one of {VARIANTS}")
+    if domain != "real":
+        raise ValueError(f"variant {variant!r} holds real recordings only, not domain {domain!r}")
+    if benchmark is not None:
+        raise ValueError(f"variant {variant!r} is not part of a frozen benchmark; select with split=")
+
+
+def _download_variant(repo_id: str, root: Path, variant: str, trajs: list[str] | None, mods: list[str] | None,
+                      revision: str | None, max_workers: int, domain: str, split: str | None, task: str | None,
+                      benchmark: str | None) -> Path:
+    """:func:`download` of the derived copy ``variant``: its metadata, then the data asked for of the
+    trajectories its manifest lists."""
+    from huggingface_hub import snapshot_download
+
+    _check_variant(variant, domain, benchmark)
+
+    def fetch(patterns):
+        snapshot_download(repo_id, repo_type="dataset", revision=revision, local_dir=root,
+                          allow_patterns=[f"{variant}/{p}" for p in patterns], max_workers=max_workers)
+
+    sub = root / variant
+    fetch(META_PATTERNS + VARIANT_META)
+    if trajs is None and (split is not None or task is not None):
+        trajs = _select(sub, repo_id, "real", split, task)
+    if trajs is None:
+        trajs = list(json.loads((sub / MANIFEST).read_text()).get("trajectories", {}))
+    fetch(["calibration/rig.yaml", "calibration/clicks_*"]
+          + [p for t in trajs for p in (f"calibration/{t}.yaml", *(f"{m}/{t}/*.parquet" for m in mods or ["*"]))])
+    return sub
 
 
 def download_sim_targets(repo_id: str, root: Path, trajectories: list[str], revision: str | None = None,

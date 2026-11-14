@@ -64,9 +64,11 @@ class OshDataset:
         split: str | None = None,
         task: str | None = None,
         benchmark: str | None = None,
+        variant: str | None = None,
     ) -> OshDataset:
+        """:func:`oshd.hub.download`, then the local copy (``variant``: that derived copy)."""
         root = download(repo_id, root, trajectories, modalities, revision, domain=domain, split=split, task=task,
-                        benchmark=benchmark)
+                        benchmark=benchmark, variant=variant)
         return cls(root, repo_id, benchmark=benchmark)
 
     def __repr__(self) -> str:

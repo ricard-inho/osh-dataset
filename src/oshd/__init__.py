@@ -8,9 +8,10 @@ Quick start::
     frame = traj.frame("realsense_color", 0)
 
     sim = OshDataset.download(domain="sim_3d", modalities=["rgb", "mocap"])
+    iso = OshDataset.download(variant="isolated", trajectories="trajectory_026")  # without the lab
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 from .calibration import Calibration, CameraIntrinsics, MissingCalibrationError
 from .dataset import OshDataset

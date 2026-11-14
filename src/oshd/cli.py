@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from .calibration import MissingCalibrationError
-from .hub import DEFAULT_REPO_ID, DOMAINS, SIM_MODALITIES, default_root
+from .hub import DEFAULT_REPO_ID, DOMAINS, SIM_MODALITIES, VARIANTS, default_root
 from .splits import BENCHMARKS, EVAL_FRACTION
 
 
@@ -23,7 +23,7 @@ def cmd_download(args) -> None:
     from .hub import download
 
     root = download(args.repo, args.root, args.trajectory, args.modality, args.revision, domain=args.domain,
-                    split=args.split, task=args.task, benchmark=args.benchmark)
+                    split=args.split, task=args.task, benchmark=args.benchmark, variant=args.variant)
     print(f"dataset at {root}")
 
 
@@ -430,6 +430,9 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--benchmark", choices=BENCHMARKS,
                    help="frozen benchmark (e.g. v1): its split and Hub revision")
     d.add_argument("--revision", help="commit sha / tag to pin")
+    d.add_argument("--variant", choices=VARIANTS,
+                   help="a derived copy of the real recordings instead, into <root>/<variant>: isolated (without "
+                        "the lab), coregistered / isolated_coregistered (in one reference view)")
     d.set_defaults(fn=cmd_download)
 
     s = sub.add_parser("splits", help="train / test split per domain and task; `update` assigns new trajectories")
