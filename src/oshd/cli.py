@@ -432,7 +432,8 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--revision", help="commit sha / tag to pin")
     d.add_argument("--variant", choices=VARIANTS,
                    help="a derived copy of the real recordings instead, into <root>/<variant>: isolated (without "
-                        "the lab), coregistered / isolated_coregistered (in one reference view)")
+                        "the lab), coregistered / isolated_coregistered (in one reference view), twin_replay (the "
+                        "simulator's replay of the real trajectories)")
     d.set_defaults(fn=cmd_download)
 
     s = sub.add_parser("splits", help="train / test split per domain and task; `update` assigns new trajectories")

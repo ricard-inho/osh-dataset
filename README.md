@@ -63,13 +63,15 @@ The default location is `~/.cache/oshd/<repo>`. Override it with `--root` or
 ### Derived copies of the real recordings
 
 The repo also holds three copies of 76 real trajectories, derived by `oshd-isolate`
-(osh_dataset_pipeline, `real/isolate/`). Each sits in its own Hub folder with the layout above:
+(osh_dataset_pipeline, `real/isolate/`), and a simulated replay of some of them. Each sits in
+its own Hub folder with the layout above:
 
 | `--variant` | content |
 | --- | --- |
 | `isolated` | every modality with only the target mockup, the lab removed; adds `firefly_semantic` and `realsense_color_semantic` |
 | `coregistered` | the original recordings in one reference view (the Firefly's), one modality `coregistered` |
 | `isolated_coregistered` | the isolated copy in that reference view |
+| `twin_replay` | the zero-G lab replayed in the Space Robotics Bench along the tracked trajectories of a few real recordings: Firefly, RealSense colour and depth, events and IMU at the real stamps, with the real calibration and motion capture; run records under `twin/` |
 
 ```bash
 oshd download --variant isolated -t trajectory_026 -m firefly -m events

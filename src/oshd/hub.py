@@ -48,12 +48,13 @@ SIM_MODALITIES = ("rgb", "depth", "semantic", "events", "lidar", "mocap", "imu",
 #: the real mockup recordings (sim_zerog trajectories whose target is a real mockup, ``real_<mockup>``)
 DOMAINS = ("real", "synthetic", "all") + SIM_GROUPS + ("twin",)
 
-#: derived copies of the real recordings (oshd-isolate), each in its own Hub folder: without the lab
-#: (``isolated``), and the original / isolated recordings re-expressed in one reference view
-#: (``coregistered`` / ``isolated_coregistered``, modality ``coregistered``)
-VARIANTS = ("isolated", "coregistered", "isolated_coregistered")
-#: a variant's own metadata: corrections, configuration, statistics
-VARIANT_META = ["isolate/*"]
+#: derived copies of the real recordings, each in its own Hub folder: without the lab (``isolated``),
+#: the original / isolated recordings re-expressed in one reference view (``coregistered`` /
+#: ``isolated_coregistered``, modality ``coregistered``), all from oshd-isolate, and the simulator's
+#: replay of the real recordings along their tracked trajectories (``twin_replay``)
+VARIANTS = ("isolated", "coregistered", "isolated_coregistered", "twin_replay")
+#: a variant's own metadata: corrections, configuration, statistics (``isolate/``), run records (``twin/``)
+VARIANT_META = ["isolate/*", "twin/*"]
 
 MANIFEST = "manifest.json"
 SIM_MANIFEST = "sim_manifest.json"

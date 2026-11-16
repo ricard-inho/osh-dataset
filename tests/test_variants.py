@@ -19,10 +19,13 @@ ISOLATED = ["isolated/manifest.json", "isolated/splits.json", "isolated/models/o
 COREGISTERED = ["coregistered/manifest.json", f"coregistered/calibration/{T}.yaml",
                 f"coregistered/coregistered/{T}/a.parquet", "coregistered/isolate/coregistered/manifest.json"]
 BOTH = [f"isolated_coregistered/coregistered/{T}/a.parquet", "isolated_coregistered/manifest.json"]
+#: the simulator's replay of the real recordings, its run records under ``twin/``
+TWIN = ["twin_replay/manifest.json", "twin_replay/calibration/rig.yaml", f"twin_replay/calibration/{T}.yaml",
+        f"twin_replay/events/{T}/a.parquet", f"twin_replay/firefly/{T}/a.parquet", "twin_replay/twin/counts/a.json"]
 #: a trajectory folder the variants' manifests do not list: never fetched
 UNLISTED = ["isolated/firefly/trajectory_008/a.parquet", "isolated/calibration/trajectory_008.yaml",
             "coregistered/coregistered/trajectory_008/a.parquet"]
-REPO = ORIGINAL + ISOLATED + COREGISTERED + BOTH + UNLISTED
+REPO = ORIGINAL + ISOLATED + COREGISTERED + BOTH + TWIN + UNLISTED
 
 
 @pytest.fixture
@@ -69,6 +72,14 @@ def test_a_variant_downloads_its_own_folder(fetched, tmp_path):
 def test_a_variant_without_filters_downloads_all_of_it(fetched, tmp_path):
     hub.download(root=tmp_path, variant="coregistered")
     assert fetched == set(COREGISTERED)
+
+
+def test_the_twin_replay_downloads_with_its_run_records(fetched, tmp_path):
+    root = hub.download(root=tmp_path, variant="twin_replay")
+    assert root == tmp_path / "twin_replay" and fetched == set(TWIN)
+    fetched.clear()
+    hub.download(root=tmp_path, variant="twin_replay", modalities=["events"])
+    assert fetched == set(TWIN) - {f"twin_replay/firefly/{T}/a.parquet"}
 
 
 def test_a_variant_split_selects_from_its_own_manifest(fetched, tmp_path, monkeypatch):
