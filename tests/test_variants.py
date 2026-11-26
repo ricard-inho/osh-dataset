@@ -28,12 +28,16 @@ UNLISTED = ["isolated/firefly/trajectory_008/a.parquet", "isolated/calibration/t
 REPO = ORIGINAL + ISOLATED + COREGISTERED + BOTH + TWIN + UNLISTED
 
 
+class Fetched(set):
+    revisions: set
+
+
 @pytest.fixture
 def fetched(monkeypatch, tmp_path):
     """Files a download would fetch from a repo holding REPO (huggingface_hub's own matching)."""
     import huggingface_hub
 
-    got = set()
+    got, revisions = Fetched(), set()
 
     def fetch(path):
         p = tmp_path / path
@@ -41,7 +45,8 @@ def fetched(monkeypatch, tmp_path):
         p.write_text(MANIFEST if path.endswith("manifest.json") else "{}")
         got.add(path)
 
-    def fake_snapshot(repo_id, allow_patterns=None, ignore_patterns=None, **kw):
+    def fake_snapshot(repo_id, allow_patterns=None, ignore_patterns=None, revision=None, **kw):
+        revisions.add(revision)
         for path in filter_repo_objects(REPO, allow_patterns=allow_patterns, ignore_patterns=ignore_patterns):
             fetch(path)
 
@@ -53,6 +58,7 @@ def fetched(monkeypatch, tmp_path):
 
     monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
     monkeypatch.setattr(huggingface_hub, "hf_hub_download", fake_file)
+    got.revisions = revisions
     return got
 
 
@@ -136,3 +142,17 @@ def test_explicit_trajectories_win_over_a_split(fetched, tmp_path, monkeypatch, 
         hub.download(root=tmp_path, variant=variant, trajectories=[T], split="test", modalities=["firefly"])
     assert f"{variant + '/' if variant else ''}firefly/{T}/a.parquet" in fetched
     assert not any("trajectory_008" in p for p in fetched)
+
+
+def test_a_benchmark_holding_the_variant_pins_its_revision_and_split(fetched, tmp_path, monkeypatch):
+    from oshd.splits import load_benchmark
+
+    asked = []
+    monkeypatch.setattr(OshDataset, "split", lambda self, *a, **k: asked.append((a, k)) or [T])
+    root = hub.download(root=tmp_path, variant="isolated", benchmark="v4", split="test", modalities=["events"])
+    assert root == tmp_path / "isolated" and f"isolated/events/{T}/a.parquet" in fetched
+    assert fetched.revisions == {load_benchmark("v4")["revision"]}
+    (args, kw), = asked
+    assert args[0] == "test" and kw["benchmark"] == "v4"
+    with pytest.raises(ValueError, match="pinned"):
+        hub.download(root=tmp_path, variant="isolated", benchmark="v4", revision="main")

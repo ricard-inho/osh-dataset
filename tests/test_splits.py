@@ -115,6 +115,19 @@ def test_benchmark_v2_frozen_and_extends_v1():
     assert update_sim_splits(None, manifest(16))["benchmark_v2"] == b
 
 
+def test_benchmark_v4_frozen_is_v3_with_the_derived_copies():
+    b, v3 = load_benchmark("v4"), load_benchmark("v3")
+    assert b["name"] == "benchmark_v4" and b["repo_id"] == "OSHDataset/oshd"
+    assert b["revision"] == "8721c61ed731a87835b0c1586d2aa5e88fcd4036"
+    assert {k: b[k] for k in ("train", "val", "test", "summary")} == {k: v3[k] for k in ("train", "val", "test", "summary")}
+    assert {v: len(t) for v, t in b["variants"].items()} == {
+        "isolated": 76, "coregistered": 76, "isolated_coregistered": 76, "twin_replay": 4}
+    real = set(b["train"]) | set(b["test"])
+    assert all(set(t) <= real for t in b["variants"].values())  # a copy has its trajectory's split
+    assert b["variant_summary"]["isolated"] == {"train": 60, "val": 0, "test": 16}
+    assert update_sim_splits(None, manifest(16))["benchmark_v4"] == b
+
+
 def test_benchmark_split_and_download_pin(ds, monkeypatch):
     from oshd import hub
 

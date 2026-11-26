@@ -87,7 +87,8 @@ ds.root  # ~/.cache/oshd/OSHDataset--oshd/isolated
 
 A variant lands in `<root>/<variant>` and opens like the original. Other downloads never fetch
 the variants (oshd 1.1.0 and older also fetch them for real trajectories selected with `-t` or
-`--split` and no `-m`: upgrade). The pinned benchmarks predate the variants, so `--benchmark` and `--variant` do not combine.
+`--split` and no `-m`: upgrade). `benchmark_v4` and later hold the variants: `--benchmark v4 --variant isolated`
+pins the variant to v4's revision and split (a derived copy has its trajectory's split); v1 to v3 predate them.
 `oshd` reads the `image` channel of `coregistered`. The pipeline's
 `oshd_isolate.coregister.coregistered_frame(ds[trajectory], k)` decodes every channel of row `k`.
 
@@ -389,7 +390,8 @@ one Hub revision with a fixed train / test split. It ships with the package
 |---|---|---|---|
 | `v1` (`benchmark_v1`, frozen 2026-10-20) | `8205a11` | 2195 sim + 3 real | sim_3d/approach 378 / 93, sim_3d/orbit 800 / 201, sim_zerog/docking 300 / 72, sim_zerog/inspection 282 / 69, real 2 / 1 |
 | `v2` (`benchmark_v2`, frozen 2026-10-31, oshd 1.0.0) | `df3530b` | 6413 sim + 92 real | sim_3d/approach 1089 / 186, sim_3d/orbit 2528 / 522, sim_zerog/docking 921 / 162, sim_zerog/inspection 861 / 144, real/antena 24 / 6, real/antena_1_solar 49 / 10, real/cubesat 2 / 1 |
-| **`v3`** (`benchmark_v3`, frozen 2026-11-02, oshd 1.1.0) | `c8e5ca0` | 6613 sim + 92 real | v2 + the lab twins: twin/antena 80 / 20, twin/antena_1_solar 80 / 20 (in sim_zerog/docking 999 / 182, sim_zerog/inspection 943 / 164); simulated lidar about the sensor origin |
+| `v3` (`benchmark_v3`, frozen 2026-11-02, oshd 1.1.0) | `c8e5ca0` | 6613 sim + 92 real | v2 + the lab twins: twin/antena 80 / 20, twin/antena_1_solar 80 / 20 (in sim_zerog/docking 999 / 182, sim_zerog/inspection 943 / 164); simulated lidar about the sensor origin |
+| **`v4`** (`benchmark_v4`, frozen 2026-11-26, oshd 1.3.0) | `8721c61` | 6613 sim + 92 real | v3's splits + the derived copies of the real recordings: isolated, coregistered, isolated_coregistered 60 / 16 each, twin_replay 2 / 2 |
 
 `v2` is the final data collection: every simulated campaign and every real recording with a
 target model (the CubeSat and both mockups, with their CAD, rig calibration and real lighting
@@ -398,12 +400,18 @@ target model (the CubeSat and both mockups, with their CAD, rig calibration and 
 `v3` adds the zero-G lab twins of the real mockup recordings (see [Simulated data](#simulated-data)),
 for real <-> twin transfer: train on `domain="real"` and test on `domain="twin"`, or the other
 way round. Its Hub revision also has the simulated lidar re-expressed about the sensor. It
-contains `v2`, and every `v2` trajectory keeps its split. **Use `v3` for new work.**
+contains `v2`, and every `v2` trajectory keeps its split. The RA-L paper's numbers use `v3`.
+
+`v4` is the latest data: `v3`'s trajectories and splits (unchanged) at the revision of
+`OSHDataset/oshd` that adds the [derived copies](#derived-copies-of-the-real-recordings) of the
+real recordings (the lab removed, the co-registered views, the simulator's replay). A copy of a
+trajectory has that trajectory's split. **Use `v4` for new work.**
 
 ```bash
 oshd download --benchmark v3 --domain sim_zerog --task docking --split test -m rgb -m depth -m mocap
 oshd download --benchmark v3 --domain twin --split train -m rgb -m events -m mocap
 oshd download --benchmark v3 --domain real --split test -m realsense_color -m realsense_depth -m mocap
+oshd download --benchmark v4 --variant isolated --split test -m firefly -m events -m firefly_semantic
 oshd splits --benchmark v3
 ```
 
@@ -411,11 +419,12 @@ oshd splits --benchmark v3
 ds = OshDataset.download(benchmark="v3", domain="sim_3d", split="train", modalities=["rgb", "mocap"])
 ds.split("test", domain="sim_zerog", task="docking", benchmark="v3")
 ds.split("test", domain="twin", benchmark="v3")       # 40 twin trajectories
+iso = OshDataset.download(benchmark="v4", variant="isolated", split="train", modalities="events")  # 60 trajectories
 ```
 
 `--benchmark` pins the download to the benchmark's revision, so later uploads and repairs never
 change its data. For `v1` the target CAD was uploaded after the freeze, so it comes from its
-`models_revision` (`22a8431`); `v2` and `v3` have everything at their own revision. Its simulated trajectories keep their split in the growing `splits.json` too.
+`models_revision` (`22a8431`); `v2` to `v4` have everything at their own revision. Its simulated trajectories keep their split in the growing `splits.json` too.
 Cite the benchmark name and revision in the paper. `ds.hub_splits` gives the splits shown by the Hub viewer (simulation scenarios and
 groups of real trajectories); they organise the data and are not train / test splits.
 

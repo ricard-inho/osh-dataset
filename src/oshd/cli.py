@@ -88,15 +88,16 @@ def cmd_splits(args) -> None:
     rows: dict[str, dict[str, int]] = {}
     if args.benchmark:  # the frozen counts: they need no local manifest
         rows = {k: dict(v) for k, v in b.get("summary", {}).items()}
+        rows.update({f"variant {k}": dict(v) for k, v in b.get("variant_summary", {}).items()})
     for split in ("train", "val", "test") if not rows else ():
         for t in ds.split(split, benchmark=args.benchmark):
             info = ds.trajectory_info(t)
             cell = f"{info.get('group') or info['domain']}/{info['task']}" if info.get("task") else \
                 (info.get("group") or info["domain"])
             rows.setdefault(cell, {"train": 0, "val": 0, "test": 0})[split] += 1
-    print(f"{'':<22} {'train':>6} {'val':>5} {'test':>5}")
+    print(f"{'':<32} {'train':>6} {'val':>5} {'test':>5}")
     for cell, n in sorted(rows.items()):
-        print(f"  {cell:<20} {n['train']:>6} {n['val']:>5} {n['test']:>5}")
+        print(f"  {cell:<30} {n['train']:>6} {n['val']:>5} {n['test']:>5}")
 
 
 def cmd_info(args) -> None:

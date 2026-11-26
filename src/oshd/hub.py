@@ -156,7 +156,7 @@ def download(
     ``variant`` (one of :data:`VARIANTS`) downloads that derived copy of the real recordings
     instead, with the same ``trajectories``, ``modalities``, ``split`` and ``revision``, into
     ``<root>/<variant>``, and returns that folder. Without it, the derived copies are never
-    fetched.
+    fetched. A ``benchmark`` that holds the variant (v4 and later) pins its revision and split.
     """
     from huggingface_hub import snapshot_download
 
@@ -263,7 +263,12 @@ def _check_variant(variant: str, domain: str, benchmark: str | None) -> None:
     if domain != "real":
         raise ValueError(f"variant {variant!r} holds real recordings only, not domain {domain!r}")
     if benchmark is not None:
-        raise ValueError(f"variant {variant!r} is not part of a frozen benchmark; select with split=")
+        from .splits import load_benchmark
+
+        b = load_benchmark(benchmark)
+        if variant not in b.get("variants", {}):
+            raise ValueError(f"variant {variant!r} is not part of {b['name']} (benchmark_v4 and later hold the "
+                             "variants); select with split=")
 
 
 def _download_variant(repo_id: str, root: Path, variant: str, trajs: list[str] | None, mods: list[str] | None,
@@ -274,6 +279,7 @@ def _download_variant(repo_id: str, root: Path, variant: str, trajs: list[str] |
     from huggingface_hub import snapshot_download
 
     _check_variant(variant, domain, benchmark)
+    revision, _ = _pin(benchmark, revision)
 
     def fetch(patterns):
         snapshot_download(repo_id, repo_type="dataset", revision=revision, local_dir=root,
@@ -281,8 +287,8 @@ def _download_variant(repo_id: str, root: Path, variant: str, trajs: list[str] |
 
     sub = root / variant
     fetch(META_PATTERNS + VARIANT_META)
-    if trajs is None and (split is not None or task is not None):
-        trajs = _select(sub, repo_id, "real", split, task)
+    if trajs is None and (split is not None or task is not None or benchmark is not None):
+        trajs = _select(sub, repo_id, "real", split, task, benchmark)
     if trajs is None:
         trajs = list(json.loads((sub / MANIFEST).read_text()).get("trajectories", {}))
     fetch(["calibration/rig.yaml", "calibration/clicks_*"]
