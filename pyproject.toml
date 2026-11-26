@@ -47,7 +47,7 @@ all = ["oshd[torch,mesh,viz,calib]"]
 Homepage = "https://github.com/ricard-inho/osh-dataset"
 Issues = "https://github.com/ricard-inho/osh-dataset/issues"
 Documentation = "https://github.com/ricard-inho/osh-dataset#readme"
-Dataset = "https://huggingface.co/datasets/r3m3c3/oshd"
+Dataset = "https://huggingface.co/datasets/OSHDataset/oshd"
 
 [project.scripts]
 oshd = "oshd.cli:main"

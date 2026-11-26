@@ -37,7 +37,7 @@ __all__ = [
     "remote_sim_manifest",
 ]
 
-DEFAULT_REPO_ID = os.environ.get("OSHD_REPO_ID", "r3m3c3/oshd")
+DEFAULT_REPO_ID = os.environ.get("OSHD_REPO_ID", "OSHDataset/oshd")
 
 REAL_MODALITIES = ("events", "firefly", "realsense_color", "realsense_depth", "lidar", "imu", "mocap",
                    "robot_messages")

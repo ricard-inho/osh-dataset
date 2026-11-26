@@ -1,6 +1,6 @@
 {
  "name": "benchmark_v3",
- "repo_id": "r3m3c3/oshd",
+ "repo_id": "OSHDataset/oshd",
  "revision": "c8e5ca0d6f38cea943dfc60009dbfff9f7bf026f",
  "models_revision": "c8e5ca0d6f38cea943dfc60009dbfff9f7bf026f",
  "frozen": "2026-11-02",

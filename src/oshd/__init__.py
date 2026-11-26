@@ -11,7 +11,7 @@ Quick start::
     iso = OshDataset.download(variant="isolated", trajectories="trajectory_026")  # without the lab
 """
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 from .calibration import Calibration, CameraIntrinsics, MissingCalibrationError
 from .dataset import OshDataset

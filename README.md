@@ -1,7 +1,7 @@
 # oshd
 
 Download, synchronize and turn the OSHD multimodal robotics dataset
-([`r3m3c3/oshd`](https://huggingface.co/datasets/r3m3c3/oshd) on the Hugging Face Hub)
+([`OSHDataset/oshd`](https://huggingface.co/datasets/OSHDataset/oshd) on the Hugging Face Hub)
 into training data for **6D pose estimation, object detection, segmentation and optical
 flow**.
 
@@ -59,6 +59,8 @@ narrow it down. With `-t`, the named trajectories are downloaded whatever their 
 
 The default location is `~/.cache/oshd/<repo>`. Override it with `--root` or
 `$OSHD_DATA_DIR`, and point at another repo with `--repo` / `$OSHD_REPO_ID`.
+The repo moved from `r3m3c3/oshd` (which redirects) to `OSHDataset/oshd` in oshd 1.2.1: to keep
+an older download, rename `~/.cache/oshd/r3m3c3--oshd` to `~/.cache/oshd/OSHDataset--oshd`.
 
 ### Derived copies of the real recordings
 
@@ -80,7 +82,7 @@ oshd download --variant isolated_coregistered --split test
 
 ```python
 ds = OshDataset.download(variant="isolated", trajectories="trajectory_026", modalities="events")
-ds.root  # ~/.cache/oshd/r3m3c3--oshd/isolated
+ds.root  # ~/.cache/oshd/OSHDataset--oshd/isolated
 ```
 
 A variant lands in `<root>/<variant>` and opens like the original. Other downloads never fetch
@@ -201,7 +203,7 @@ The results are also copied into your local dataset right away. Check them with
 `oshd viz -m <camera> -m mocap`, which draws the masks on the images. Then share them:
 
 ```bash
-hf upload r3m3c3/oshd oshd_calibration . --repo-type dataset --exclude 'overlays_*/*'
+hf upload OSHDataset/oshd oshd_calibration . --repo-type dataset --exclude 'overlays_*/*'
 ```
 
 ## Real targets

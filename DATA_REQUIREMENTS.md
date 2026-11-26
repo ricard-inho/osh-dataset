@@ -22,7 +22,7 @@ trajectory_007
   events             intrinsics --  extrinsics --
 ```
 
-All files go in the **Hub dataset repo** (`r3m3c3/oshd`), not in this Python package,
+All files go in the **Hub dataset repo** (`OSHDataset/oshd`), not in this Python package,
 so everyone gets them with `oshd download` and they can be versioned with the data.
 
 Conventions used everywhere:
